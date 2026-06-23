@@ -1,23 +1,22 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import {
-  Building2, ChevronDown, ChevronRight, Eye, EyeOff,
-  LoaderCircle, LockKeyhole, Mail, Search, Server, Sparkles, UserRound, X,
+  Building2, ChevronRight, Eye, EyeOff,
+  LoaderCircle, LockKeyhole, Mail, Search, Sparkles, UserRound, X,
 } from 'lucide-react'
 import { Avatar, Badge, Card, EmptyState } from '../components'
 import { BrandLogo } from '../components/BrandLogo'
 import { Busy, ErrorBox } from '../components/ui'
 import { useLoad } from '../hooks/useLoad'
-import { api, getApiBase, post, setApiBase, setToken } from '../api'
+import { api, getApiBase, post, setToken } from '../api'
 import type { Employee, Organization, Session } from '../types'
 import { initials } from '../utils/format'
 
 export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: Session, org: Organization) => void }) {
   const [configured, setConfigured] = useState<boolean | null>(null)
   const [showPassword, setShowPassword] = useState(false)
-  const [showServer, setShowServer] = useState(false)
+  const [remember, setRemember] = useState(() => localStorage.getItem('identime_remember') !== 'false')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [server, setServer] = useState(getApiBase())
   const [form, setForm] = useState({ organizationName: '', fullName: '', email: '', password: '' })
 
   const check = useCallback(async () => {
@@ -43,8 +42,6 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: Sessio
     void check()
   }, [check])
 
-  const saveServer = async () => { setApiBase(server); await check(); setShowServer(false) }
-
   const startGoogleLogin = () => {
     const base = getApiBase()
     const returnTo = window.location.origin
@@ -55,7 +52,8 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: Sessio
     e.preventDefault(); setBusy(true); setError('')
     try {
       const result = await post<{ token: string; user: Session; organization?: Organization }>(configured ? '/auth/login' : '/setup', form)
-      setToken(result.token)
+      localStorage.setItem('identime_remember', remember ? 'true' : 'false')
+      setToken(result.token, remember)
       if (result.organization) onAuthenticated(result.user, result.organization)
       else { const me = await api<{ user: Session; organization: Organization }>('/me'); onAuthenticated(me.user, me.organization) }
     } catch (e) { setError(e instanceof Error ? e.message : 'Gagal masuk.') }
@@ -103,22 +101,15 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: Sessio
             </>}
             <label>Email<div className="field"><Mail size={17} /><input type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="admin@perusahaan.com" /></div></label>
             <label>Kata sandi<div className="field"><LockKeyhole size={17} /><input type={showPassword ? 'text' : 'password'} minLength={8} required value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Minimal 8 karakter" /><button type="button" onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>
+            <label className="remember-check">
+              <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} />
+              <span><strong>Ingat aku</strong><small>Tetap masuk di perangkat ini.</small></span>
+            </label>
             {error && <p className="auth-error">{error}</p>}
             <button className="login-submit" disabled={busy || configured === null}>
               {busy ? <><LoaderCircle className="spin" /> Memproses...</> : <>{configured === false ? 'Buat ruang kerja' : 'Masuk ke IdenTime'} <ChevronRight size={17} /></>}
             </button>
           </form>
-          <button className="server-toggle" onClick={() => setShowServer(!showServer)}>
-            <Server size={15} />
-            <span><strong>Server aplikasi</strong><small>{getApiBase() || 'Server deployment saat ini'}</small></span>
-            <ChevronDown size={15} />
-          </button>
-          {showServer && (
-            <div className="server-config">
-              <label>URL Vercel<input value={server} onChange={e => setServer(e.target.value)} placeholder="https://nama-app.vercel.app" /></label>
-              <button onClick={saveServer}>Hubungkan</button>
-            </div>
-          )}
           <p className="login-terms">Kamera dan lokasi hanya digunakan saat Anda menjalankan absensi.</p>
         </div>
       </section>

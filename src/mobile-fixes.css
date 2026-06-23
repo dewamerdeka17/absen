@@ -42,7 +42,7 @@ main,
     right: 14px;
   }
 
-  .top-actions .icon-button:not(.notify) {
+  .top-actions .icon-button:not(.notify):not(.theme-toggle) {
     display: none;
   }
 

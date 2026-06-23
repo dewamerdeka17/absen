@@ -11,6 +11,14 @@ import { Busy, Toast } from './components/ui'
 import { AuthScreen, SearchResults } from './pages/Auth'
 import type { Employee, NavId, Organization, Session } from './types'
 
+type ThemeMode = 'light' | 'dark'
+
+function initialTheme(): ThemeMode {
+  const saved = localStorage.getItem('identime_theme')
+  if (saved === 'light' || saved === 'dark') return saved
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
 // Lazy-load heavy pages for better initial bundle
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })))
 const EmployeesPage = lazy(() => import('./pages/Employees').then(m => ({ default: m.EmployeesPage })))
@@ -34,14 +42,21 @@ export default function LiveApp() {
   const [scanRefresh, setScanRefresh] = useState(0)
   const [toast, setToast] = useState<{ text: string; error?: boolean } | null>(null)
   const [employees, setEmployees] = useState<Employee[]>([])
+  const [theme, setTheme] = useState<ThemeMode>(initialTheme)
 
   const notify = (text: string, error = false) => setToast({ text, error })
+  const toggleTheme = () => setTheme(value => value === 'dark' ? 'light' : 'dark')
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    localStorage.setItem('identime_theme', theme)
+  }, [theme])
 
   const bootstrap = useCallback(async () => {
     const params = new URLSearchParams(window.location.search)
     const oauthToken = params.get('oauth_token')
     if (oauthToken) {
-      setToken(oauthToken)
+      setToken(oauthToken, true)
       params.delete('oauth_token')
       const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}${window.location.hash}`
       window.history.replaceState(null, '', next)
@@ -99,7 +114,7 @@ export default function LiveApp() {
     <div className="app-shell">
       <Sidebar active={active} setActive={setActive} open={menu} close={() => setMenu(false)} user={user} org={org} onLogout={logout} />
       <div className="main-shell">
-        <Header active={active} menu={() => setMenu(true)} search={search} setSearch={setSearch} />
+        <Header active={active} menu={() => setMenu(true)} search={search} setSearch={setSearch} theme={theme} toggleTheme={toggleTheme} />
         <main>
           <Suspense fallback={<Busy />}>
             {search ? <SearchResults search={search} close={() => setSearch('')} /> : page}

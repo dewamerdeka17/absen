@@ -1,7 +1,7 @@
 import {
   Bell, CalendarDays, ChevronDown, ChevronRight, Fingerprint, FileBarChart,
-  LayoutDashboard, LocateFixed, LogOut, Menu, MessageSquareText, Search, Settings,
-  Sparkles, UserRound, Users, WalletCards, X,
+  LayoutDashboard, LocateFixed, LogOut, Menu, MessageSquareText, Moon, Search, Settings,
+  Sparkles, Sun, UserRound, Users, WalletCards, X,
 } from 'lucide-react'
 import { Avatar } from '../components'
 import { BrandLogo } from './BrandLogo'
@@ -92,8 +92,9 @@ export function Sidebar({ active, setActive, open, close, user, org, onLogout }:
   )
 }
 
-export function Header({ active, menu, setSearch, search }: {
+export function Header({ active, menu, setSearch, search, theme, toggleTheme }: {
   active: NavId; menu: () => void; setSearch: (v: string) => void; search: string
+  theme: 'light' | 'dark'; toggleTheme: () => void
 }) {
   return (
     <header className="topbar">
@@ -105,6 +106,9 @@ export function Header({ active, menu, setSearch, search }: {
       </label>
       <div className="top-actions">
         <button className="top-status"><span />Database terhubung</button>
+        <button className="icon-button theme-toggle" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Gunakan mode terang' : 'Gunakan mode gelap'}>
+          {theme === 'dark' ? <Sun size={19} /> : <Moon size={19} />}
+        </button>
         <button className="icon-button"><MessageSquareText size={19} /></button>
         <button className="icon-button notify"><Bell size={19} /></button>
       </div>

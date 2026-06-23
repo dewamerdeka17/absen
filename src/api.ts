@@ -5,30 +5,32 @@ import { Share } from '@capacitor/share'
 export type ApiError = Error & { code?: string; fields?: Record<string, string[]>; status?: number }
 
 const normalize = (value: string) => value.replace(/\/$/, '')
+const tokenKey = 'hadirin_token'
 
 export function getApiBase() {
-  const saved = localStorage.getItem('hadirin_api_url')
+  localStorage.removeItem('hadirin_api_url')
   const configured = import.meta.env.VITE_API_URL as string | undefined
-  return normalize(saved || configured || '')
+  return normalize(configured || '')
 }
 
-export function setApiBase(value: string) {
-  const base = normalize(value.trim())
-  if (base) localStorage.setItem('hadirin_api_url', base)
-  else localStorage.removeItem('hadirin_api_url')
+function getToken() {
+  return localStorage.getItem(tokenKey) || sessionStorage.getItem(tokenKey)
 }
 
-export function setToken(token?: string) {
-  if (token) localStorage.setItem('hadirin_token', token)
-  else localStorage.removeItem('hadirin_token')
+export function setToken(token?: string, remember = true) {
+  localStorage.removeItem(tokenKey)
+  sessionStorage.removeItem(tokenKey)
+  if (!token) return
+  if (remember) localStorage.setItem(tokenKey, token)
+  else sessionStorage.setItem(tokenKey, token)
 }
 
 export function hasToken() {
-  return Boolean(localStorage.getItem('hadirin_token'))
+  return Boolean(getToken())
 }
 
 export async function api<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem('hadirin_token')
+  const token = getToken()
   const response = await fetch(`${getApiBase()}/api${path}`, {
     ...options,
     headers: {

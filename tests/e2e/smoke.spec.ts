@@ -24,6 +24,8 @@ test('auth screen renders without a visible runtime error', async ({ page }) => 
   await expect(page.getByRole('heading', { name: /Siapkan ruang kerja|Selamat datang kembali/ })).toBeVisible()
   await expect(page.getByLabel('Email')).toBeVisible()
   await expect(page.getByLabel('Kata sandi')).toBeVisible()
+  await expect(page.getByLabel(/Ingat aku/)).toBeVisible()
+  await expect(page.getByText(/Server aplikasi|URL Vercel|Alamat API Vercel/i)).toHaveCount(0)
   await expect(page.getByText(/Cannot read properties/i)).toHaveCount(0)
   expect(pageErrors).toEqual([])
 })
