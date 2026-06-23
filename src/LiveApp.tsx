@@ -102,7 +102,7 @@ export default function LiveApp() {
       case 'reports': return <ReportsPage {...props} />
       case 'maps': return <MapsPage user={user} {...props} />
       case 'settings': return <SettingsPage user={user} org={org} setOrg={setOrg} {...props} />
-      default: return <ProfilePage user={user} org={org} />
+      default: return <ProfilePage user={user} org={org} notify={notify} />
     }
   }, [active, user, org, scanRefresh])
 

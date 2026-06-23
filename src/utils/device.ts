@@ -8,11 +8,16 @@ export async function locate() {
     const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 12000 })
     return { latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy }
   }
+  if (!navigator.geolocation) throw new Error('Browser ini tidak mendukung geolokasi.')
   return new Promise<{ latitude: number; longitude: number; accuracy: number }>((resolve, reject) =>
     navigator.geolocation.getCurrentPosition(
       p => resolve({ latitude: p.coords.latitude, longitude: p.coords.longitude, accuracy: p.coords.accuracy }),
-      () => reject(new Error('Lokasi tidak dapat diakses.')),
-      { enableHighAccuracy: true, timeout: 12000 },
+      error => {
+        if (error.code === error.PERMISSION_DENIED) reject(new Error('Izin lokasi ditolak. Aktifkan izin lokasi untuk menguji live tracking.'))
+        else if (error.code === error.TIMEOUT) reject(new Error('Pengambilan lokasi terlalu lama. Coba lagi.'))
+        else reject(new Error('Lokasi tidak dapat diakses.'))
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 },
     ),
   )
 }

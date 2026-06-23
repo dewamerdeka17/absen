@@ -1,29 +1,50 @@
 import { useState, useMemo, type FormEvent } from 'react'
-import { Check, Download, LoaderCircle, Plus, Search, Trash2, Users } from 'lucide-react'
+import { Check, Download, Edit3, LoaderCircle, Plus, Search, Trash2, Users } from 'lucide-react'
 import { Avatar, Badge, Card, EmptyState } from '../components'
 import { Busy, ErrorBox, Modal, PageHeading } from '../components/ui'
 import { useLoad } from '../hooks/useLoad'
-import { api, downloadCsv, post, remove } from '../api'
+import { api, downloadCsv, patch, post, remove } from '../api'
 import type { Employee } from '../types'
 import { dateText, initials, rupiah, today } from '../utils/format'
 
-function EmployeeForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
-  const password = useMemo(() => `Hr!${crypto.randomUUID().slice(0, 8)}9`, [])
+const normalizeEmail = (value: string) => value.trim().toLowerCase()
+const temporaryPassword = () => `Hr!${crypto.randomUUID().slice(0, 8)}9`
+
+function EmployeeForm({ employee, onClose, onSaved }: { employee?: Employee; onClose: () => void; onSaved: () => void }) {
+  const editing = Boolean(employee)
+  const generatedPassword = useMemo(temporaryPassword, [])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [email, setEmail] = useState(() => normalizeEmail(employee?.email || ''))
+  const [password, setPassword] = useState(editing ? '' : generatedPassword)
 
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setBusy(true)
     setError('')
     const values = Object.fromEntries(new FormData(e.currentTarget))
+    const text = (key: string) => String(values[key] ?? '').trim()
+    const accountEmail = normalizeEmail(email)
+    const money = (key: string) => {
+      const value = Number.parseFloat(String(values[key] ?? '0'))
+      return Number.isFinite(value) ? value : 0
+    }
     try {
-      await post('/employees', {
-        ...values,
-        basicSalary: Number(values.basicSalary),
-        overtimeHourlyRate: Number(values.overtimeHourlyRate),
-        temporaryPassword: values.email ? values.temporaryPassword : undefined,
-      })
+      const payload = {
+        fullName: text('fullName'),
+        employeeNumber: text('employeeNumber'),
+        email: accountEmail || (editing ? '' : undefined),
+        temporaryPassword: accountEmail && password.trim() ? password.trim() : undefined,
+        phone: text('phone') || undefined,
+        department: text('department'),
+        jobTitle: text('jobTitle'),
+        employmentType: text('employmentType') || 'full_time',
+        joinedOn: text('joinedOn'),
+        basicSalary: money('basicSalary'),
+        overtimeHourlyRate: money('overtimeHourlyRate'),
+      }
+      if (editing) await patch(`/employees/${employee!.id}`, payload)
+      else await post('/employees', payload)
       onSaved()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Gagal menyimpan.')
@@ -33,27 +54,27 @@ function EmployeeForm({ onClose, onSaved }: { onClose: () => void; onSaved: () =
   }
 
   return (
-    <Modal title="Tambah karyawan" icon={<Users />} onClose={onClose}>
+    <Modal title={editing ? 'Edit karyawan' : 'Tambah karyawan'} icon={<Users />} onClose={onClose}>
       <form className="live-form" onSubmit={submit}>
         <div className="form-grid">
-          <label>Nama lengkap<input name="fullName" required /></label>
-          <label>Nomor karyawan<input name="employeeNumber" required placeholder="EMP-001" /></label>
-          <label>Email akun<input name="email" type="email" placeholder="Opsional" /></label>
-          <label>Password sementara<input name="temporaryPassword" defaultValue={password} /></label>
-          <label>Divisi<input name="department" required /></label>
-          <label>Jabatan<input name="jobTitle" required /></label>
+          <label>Nama lengkap<input name="fullName" required defaultValue={employee?.full_name || ''} /></label>
+          <label>Nomor karyawan<input name="employeeNumber" required placeholder="EMP-001" defaultValue={employee?.employee_number || ''} /></label>
+          <label>Email akun<input name="email" type="email" autoComplete="email" placeholder="Opsional" value={email} onChange={e => setEmail(normalizeEmail(e.target.value))} /></label>
+          <label>{editing ? 'Password baru' : 'Password sementara'}<input name="temporaryPassword" value={password} onChange={e => setPassword(e.target.value)} minLength={8} disabled={!email.trim()} required={!editing && Boolean(email.trim())} placeholder={editing ? 'Kosongkan jika tidak diubah' : 'Minimal 8 karakter'} /></label>
+          <label>Divisi<input name="department" required defaultValue={employee?.department || ''} /></label>
+          <label>Jabatan<input name="jobTitle" required defaultValue={employee?.job_title || ''} /></label>
           <label>Tipe kerja
-            <select name="employmentType">
+            <select name="employmentType" defaultValue={employee?.employment_type || 'full_time'}>
               <option value="full_time">Full-time</option>
               <option value="part_time">Part-time</option>
               <option value="contract">Kontrak</option>
               <option value="intern">Magang</option>
             </select>
           </label>
-          <label>Tanggal bergabung<input name="joinedOn" type="date" defaultValue={today()} required /></label>
-          <label>Gaji pokok<input name="basicSalary" type="number" min="0" defaultValue="0" required /></label>
-          <label>Tarif lembur/jam<input name="overtimeHourlyRate" type="number" min="0" defaultValue="0" /></label>
-          <label>Nomor telepon<input name="phone" /></label>
+          <label>Tanggal bergabung<input name="joinedOn" type="date" defaultValue={String(employee?.joined_on || today()).slice(0, 10)} required /></label>
+          <label>Gaji pokok<input name="basicSalary" type="number" min="0" defaultValue={employee?.basic_salary || '0'} /></label>
+          <label>Tarif lembur/jam<input name="overtimeHourlyRate" type="number" min="0" defaultValue={employee?.overtime_hourly_rate || '0'} /></label>
+          <label>Nomor telepon<input name="phone" defaultValue={employee?.phone || ''} /></label>
         </div>
         {error && <p className="form-error">{error}</p>}
         <div className="modal-actions">
@@ -68,6 +89,7 @@ function EmployeeForm({ onClose, onSaved }: { onClose: () => void; onSaved: () =
 export function EmployeesPage({ notify }: { notify: (text: string, error?: boolean) => void }) {
   const { data, loading, error, reload } = useLoad(() => api<Employee[]>('/employees'), [])
   const [open, setOpen] = useState(false)
+  const [editing, setEditing] = useState<Employee | null>(null)
 
   const del = async (id: string) => {
     if (!confirm('Nonaktifkan karyawan ini?')) return
@@ -85,7 +107,7 @@ export function EmployeesPage({ notify }: { notify: (text: string, error?: boole
       <PageHeading
         title="Data karyawan"
         subtitle="Kelola profil, akun, dan komponen gaji karyawan."
-        action={<button className="button primary" onClick={() => setOpen(true)}><Plus size={18} /> Tambah karyawan</button>}
+        action={<button className="button primary" onClick={() => { setEditing(null); setOpen(true) }}><Plus size={18} /> Tambah karyawan</button>}
       />
       {loading ? <Busy /> : error ? <ErrorBox message={error} retry={reload} /> : (
         <Card>
@@ -93,7 +115,7 @@ export function EmployeesPage({ notify }: { notify: (text: string, error?: boole
             <>
               <EmptyState icon={<Users />} title="Data karyawan masih kosong" text="Tambahkan karyawan untuk membuat akun, absensi, roster, dan payroll." />
               <div className="empty-actions">
-                <button className="button primary" onClick={() => setOpen(true)}><Plus size={17} /> Tambah pertama</button>
+                <button className="button primary" onClick={() => { setEditing(null); setOpen(true) }}><Plus size={17} /> Tambah pertama</button>
               </div>
             </>
           ) : (
@@ -113,7 +135,12 @@ export function EmployeesPage({ notify }: { notify: (text: string, error?: boole
                         <td>{e.employment_type.replace('_', ' ')}</td>
                         <td>{dateText(e.joined_on)}</td>
                         <td>{rupiah(e.basic_salary)}</td>
-                        <td><button className="icon-button subtle danger" onClick={() => del(e.id)}><Trash2 size={16} /></button></td>
+                        <td>
+                          <div className="row-actions">
+                            <button className="icon-button subtle" aria-label={`Edit ${e.full_name}`} onClick={() => { setEditing(e); setOpen(true) }}><Edit3 size={16} /></button>
+                            <button className="icon-button subtle danger" aria-label={`Hapus ${e.full_name}`} onClick={() => del(e.id)}><Trash2 size={16} /></button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -123,7 +150,7 @@ export function EmployeesPage({ notify }: { notify: (text: string, error?: boole
           )}
         </Card>
       )}
-      {open && <EmployeeForm onClose={() => setOpen(false)} onSaved={() => { setOpen(false); notify('Karyawan berhasil ditambahkan.'); void reload() }} />}
+      {open && <EmployeeForm employee={editing || undefined} onClose={() => setOpen(false)} onSaved={() => { setOpen(false); notify(editing ? 'Karyawan berhasil diperbarui.' : 'Karyawan berhasil ditambahkan.'); void reload() }} />}
     </>
   )
 }

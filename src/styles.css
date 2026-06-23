@@ -75,6 +75,10 @@ body{background:#f7f9fb;color:var(--brand-navy-dark)}
 .table-scroll{border-radius:0 0 8px 8px}
 tbody tr:nth-child(even){background:#fbfdff}
 .modal{border-radius:8px}
+.row-actions{display:flex;justify-content:flex-end;gap:6px}
+.row-actions .icon-button{width:32px;height:32px}
+.danger{color:#e34d59}
+.password-form{max-width:760px}
 
 @media(min-width:761px) and (max-width:1180px){
   .sidebar{width:224px;padding:0 12px}

@@ -135,6 +135,19 @@ class ApiError extends Error {
   constructor(public status: number, public code: string, message: string, public fields?: unknown) { super(message) }
 }
 
+function duplicateEmployeeError(error: unknown) {
+  const pgError = error as { code?: string; constraint?: string }
+  if (pgError.code !== '23505') return null
+  const constraint = String(pgError.constraint || '')
+  if (constraint.includes('employee_number')) {
+    return new ApiError(409, 'EMPLOYEE_NUMBER_EXISTS', 'Nomor karyawan sudah digunakan.')
+  }
+  if (constraint.includes('users') && constraint.includes('email')) {
+    return new ApiError(409, 'EMAIL_ALREADY_REGISTERED', 'Email akun sudah terdaftar.')
+  }
+  return new ApiError(409, 'DUPLICATE_EMPLOYEE_DATA', 'Data karyawan sudah ada.')
+}
+
 type Session = { uid: string; org: string; role: 'admin' | 'employee'; name: string; employeeId?: string | null }
 
 function secret() {
@@ -304,7 +317,11 @@ async function sessionFor(req: VercelRequest, admin = false): Promise<Session> {
   if (!token) throw new ApiError(401, 'UNAUTHENTICATED', 'Silakan masuk terlebih dahulu.')
   try {
     const verified = await jwtVerify(token, secret())
-    const session = verified.payload as unknown as Session
+    const tokenSession = verified.payload as unknown as Session
+    const result = await pool!.query('SELECT id,organization_id,full_name,role,employee_id,status FROM users WHERE id=$1 LIMIT 1', [tokenSession.uid])
+    const user = result.rows[0]
+    if (!user || user.status !== 'active') throw new ApiError(401, 'SESSION_EXPIRED', 'Sesi telah berakhir. Silakan masuk kembali.')
+    const session: Session = { uid: user.id, org: user.organization_id, role: user.role, name: user.full_name, employeeId: user.employee_id }
     if (admin && session.role !== 'admin') throw new ApiError(403, 'FORBIDDEN', 'Akses admin diperlukan.')
     return session
   } catch (error) {
@@ -332,6 +349,7 @@ async function audit(client: PoolClient, session: Session, action: string, entit
 }
 
 const credentialsSchema = z.object({ email: z.string().email(), password: z.string().min(8) })
+const passwordChangeSchema = z.object({ currentPassword: z.string().min(8), newPassword: z.string().min(8) })
 const employeeSchema = z.object({
   fullName: z.string().min(2), email: z.string().email().optional().or(z.literal('')), phone: z.string().optional(),
   employeeNumber: z.string().min(1), department: z.string().min(1), jobTitle: z.string().min(1),
@@ -419,6 +437,16 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     return send(res,200,{ user:session,organization:org.rows[0] })
   }
 
+  if (method === 'PATCH' && path === '/me/password') {
+    const session = await sessionFor(req)
+    const input = body(req, passwordChangeSchema)
+    const result = await pool!.query('SELECT password_hash FROM users WHERE id=$1 AND organization_id=$2 LIMIT 1',[session.uid,session.org])
+    const user = result.rows[0]
+    if (!user || !(await compare(input.currentPassword,user.password_hash))) throw new ApiError(401,'INVALID_CURRENT_PASSWORD','Password lama tidak sesuai.')
+    await pool!.query('UPDATE users SET password_hash=$1 WHERE id=$2 AND organization_id=$3',[await hash(input.newPassword,12),session.uid,session.org])
+    return send(res,200,{updated:true})
+  }
+
   if (method === 'GET' && path === '/dashboard') {
     const session = await sessionFor(req)
     const [employees, attendance, recent, swaps] = await Promise.all([
@@ -443,23 +471,90 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   if (path === '/employees' && method === 'POST') {
     const session=await sessionFor(req,true), input=body(req,employeeSchema), client=await pool!.connect(), id=randomUUID()
     try { await client.query('BEGIN')
+      const email = input.email?.trim().toLowerCase() || null
       await client.query(`INSERT INTO employees (id,organization_id,employee_number,full_name,email,phone,department,job_title,employment_type,joined_on,basic_salary,overtime_hourly_rate)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,[id,session.org,input.employeeNumber,input.fullName,input.email||null,input.phone||null,input.department,input.jobTitle,input.employmentType,input.joinedOn,input.basicSalary,input.overtimeHourlyRate])
-      if(input.email&&input.temporaryPassword){await client.query('INSERT INTO users (id,organization_id,email,password_hash,full_name,role,employee_id) VALUES ($1,$2,$3,$4,$5,$6,$7)',[randomUUID(),session.org,input.email.toLowerCase(),await hash(input.temporaryPassword,12),input.fullName,'employee',id])}
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,[id,session.org,input.employeeNumber.trim(),input.fullName.trim(),email,input.phone?.trim()||null,input.department.trim(),input.jobTitle.trim(),input.employmentType,input.joinedOn,input.basicSalary,input.overtimeHourlyRate])
+      if(email){
+        const existing = await client.query('SELECT id,employee_id FROM users WHERE organization_id=$1 AND lower(email)=lower($2) FOR UPDATE',[session.org,email])
+        if(existing.rowCount){
+          const linkedEmployeeId = existing.rows[0].employee_id
+          if(linkedEmployeeId&&linkedEmployeeId!==id)throw new ApiError(409,'EMAIL_ALREADY_LINKED','Email ini sudah terhubung dengan karyawan lain.')
+          await client.query('UPDATE users SET employee_id=$1 WHERE id=$2',[id,existing.rows[0].id])
+        }else if(input.temporaryPassword){
+          await client.query('INSERT INTO users (id,organization_id,email,password_hash,full_name,role,employee_id) VALUES ($1,$2,$3,$4,$5,$6,$7)',[randomUUID(),session.org,email,await hash(input.temporaryPassword,12),input.fullName.trim(),'employee',id])
+        }else{
+          throw new ApiError(400,'TEMPORARY_PASSWORD_REQUIRED','Password sementara wajib diisi jika email akun karyawan diisi.')
+        }
+      }
       await audit(client,session,'employee.create','employee',id); await client.query('COMMIT')
       return send(res,201,{id})
-    } catch(error){await client.query('ROLLBACK');throw error} finally{client.release()}
+    } catch(error){
+      await client.query('ROLLBACK')
+      const duplicate = duplicateEmployeeError(error)
+      throw duplicate || error
+    } finally{client.release()}
   }
 
   const employeeMatch=path.match(/^\/employees\/([^/]+)$/)
   if(employeeMatch&&method==='PATCH'){
-    const session=await sessionFor(req,true),input=body(req,employeeSchema.partial())
-    const keys:Record<string,string>={fullName:'full_name',email:'email',phone:'phone',employeeNumber:'employee_number',department:'department',jobTitle:'job_title',employmentType:'employment_type',joinedOn:'joined_on',basicSalary:'basic_salary',overtimeHourlyRate:'overtime_hourly_rate'}
-    const entries=Object.entries(input).filter(([key,value])=>keys[key]&&value!==undefined)
-    if(!entries.length)throw new ApiError(400,'NO_CHANGES','Tidak ada perubahan.')
-    const values=entries.map(([,value])=>value); values.push(employeeMatch[1],session.org)
-    await pool!.query(`UPDATE employees SET ${entries.map(([key],i)=>`${keys[key]}=$${i+1}`).join(',')},updated_at=now() WHERE id=$${values.length-1} AND organization_id=$${values.length}`,values)
-    return send(res,200,{updated:true})
+    const session=await sessionFor(req,true),input=body(req,employeeSchema.partial()),client=await pool!.connect()
+    try{
+      await client.query('BEGIN')
+      const employeeId=employeeMatch[1]
+      const existing=await client.query('SELECT * FROM employees WHERE id=$1 AND organization_id=$2 AND is_active=true FOR UPDATE',[employeeId,session.org])
+      if(!existing.rowCount)throw new ApiError(404,'EMPLOYEE_NOT_FOUND','Karyawan tidak ditemukan.')
+      const current=existing.rows[0]
+      const values:unknown[]=[]
+      const updates:string[]=[]
+      const has=(key:keyof typeof input)=>Object.prototype.hasOwnProperty.call(input,key)
+      const add=(column:string,value:unknown)=>{values.push(value);updates.push(`${column}=$${values.length}`)}
+      if(has('fullName'))add('full_name',input.fullName!.trim())
+      if(has('employeeNumber'))add('employee_number',input.employeeNumber!.trim())
+      if(has('email'))add('email',input.email?.trim().toLowerCase()||null)
+      if(has('phone'))add('phone',input.phone?.trim()||null)
+      if(has('department'))add('department',input.department!.trim())
+      if(has('jobTitle'))add('job_title',input.jobTitle!.trim())
+      if(has('employmentType'))add('employment_type',input.employmentType)
+      if(has('joinedOn'))add('joined_on',input.joinedOn)
+      if(has('basicSalary'))add('basic_salary',input.basicSalary)
+      if(has('overtimeHourlyRate'))add('overtime_hourly_rate',input.overtimeHourlyRate)
+      if(updates.length){
+        values.push(employeeId,session.org)
+        await client.query(`UPDATE employees SET ${updates.join(',')},updated_at=now() WHERE id=$${values.length-1} AND organization_id=$${values.length}`,values)
+      }
+      const fullName=has('fullName')?input.fullName!.trim():current.full_name
+      const email=has('email')?input.email?.trim().toLowerCase()||null:(current.email?String(current.email).toLowerCase():null)
+      const temporaryPassword=input.temporaryPassword?.trim()
+      const linked=(await client.query('SELECT id,email,role FROM users WHERE organization_id=$1 AND employee_id=$2 FOR UPDATE',[session.org,employeeId])).rows[0]
+      if(email){
+        const emailUser=(await client.query('SELECT id,employee_id FROM users WHERE organization_id=$1 AND lower(email)=lower($2) FOR UPDATE',[session.org,email])).rows[0]
+        if(emailUser?.employee_id&&emailUser.employee_id!==employeeId)throw new ApiError(409,'EMAIL_ALREADY_LINKED','Email ini sudah terhubung dengan karyawan lain.')
+        if(linked&&emailUser&&linked.id!==emailUser.id)throw new ApiError(409,'EMAIL_ALREADY_REGISTERED','Email akun sudah terdaftar.')
+        const account=linked||emailUser
+        if(account){
+          if(temporaryPassword){
+            await client.query('UPDATE users SET email=$1,full_name=$2,employee_id=$3,password_hash=$4,status=$5 WHERE id=$6',[email,fullName,employeeId,await hash(temporaryPassword,12),'active',account.id])
+          }else{
+            await client.query('UPDATE users SET email=$1,full_name=$2,employee_id=$3,status=$4 WHERE id=$5',[email,fullName,employeeId,'active',account.id])
+          }
+        }else{
+          if(!temporaryPassword)throw new ApiError(400,'TEMPORARY_PASSWORD_REQUIRED','Password sementara wajib diisi untuk membuat akun karyawan.')
+          await client.query('INSERT INTO users (id,organization_id,email,password_hash,full_name,role,employee_id) VALUES ($1,$2,$3,$4,$5,$6,$7)',[randomUUID(),session.org,email,await hash(temporaryPassword,12),fullName,'employee',employeeId])
+        }
+      }else if(temporaryPassword){
+        if(!linked)throw new ApiError(400,'EMPLOYEE_ACCOUNT_REQUIRED','Isi email akun untuk membuat atau mengubah password akun karyawan.')
+        await client.query('UPDATE users SET password_hash=$1,full_name=$2 WHERE id=$3',[await hash(temporaryPassword,12),fullName,linked.id])
+      }else if(linked&&has('fullName')){
+        await client.query('UPDATE users SET full_name=$1 WHERE id=$2',[fullName,linked.id])
+      }
+      await audit(client,session,'employee.update','employee',employeeId)
+      await client.query('COMMIT')
+      return send(res,200,{updated:true})
+    }catch(error){
+      await client.query('ROLLBACK')
+      const duplicate=duplicateEmployeeError(error)
+      throw duplicate||error
+    }finally{client.release()}
   }
   if(employeeMatch&&method==='DELETE'){
     const session=await sessionFor(req,true);await pool!.query('UPDATE employees SET is_active=false,updated_at=now() WHERE id=$1 AND organization_id=$2',[employeeMatch[1],session.org]);return res.status(204).end()
@@ -485,10 +580,14 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if(path==='/locations'&&method==='GET'){
-    const session=await sessionFor(req,true);const result=await pool!.query(`SELECT DISTINCT ON(l.employee_id) l.employee_id,e.full_name,e.job_title,l.latitude,l.longitude,l.accuracy_meters,l.recorded_at FROM location_points l JOIN employees e ON e.id=l.employee_id WHERE l.organization_id=$1 AND l.recorded_at>now()-interval '7 days' ORDER BY l.employee_id,l.recorded_at DESC`,[session.org]);return send(res,200,result.rows)
+    const session=await sessionFor(req)
+    if(session.role!=='admin'&&!session.employeeId)throw new ApiError(400,'EMPLOYEE_REQUIRED','Akun belum ditautkan ke karyawan.')
+    const params=session.role==='admin'?[session.org]:[session.org,session.employeeId]
+    const onlyMine=session.role==='admin'?'':' AND l.employee_id=$2'
+    const result=await pool!.query(`SELECT DISTINCT ON(l.employee_id) l.employee_id,e.full_name,e.job_title,l.latitude,l.longitude,l.accuracy_meters,l.recorded_at FROM location_points l JOIN employees e ON e.id=l.employee_id WHERE l.organization_id=$1${onlyMine} AND l.recorded_at>now()-interval '7 days' ORDER BY l.employee_id,l.recorded_at DESC`,params);return send(res,200,result.rows)
   }
   if(path==='/locations'&&method==='POST'){
-    const session=await sessionFor(req),input=body(req,z.object({latitude:z.number(),longitude:z.number(),accuracy:z.number().optional()}));if(!session.employeeId)throw new ApiError(400,'EMPLOYEE_REQUIRED','Akun belum ditautkan ke karyawan.');await pool!.query('INSERT INTO location_points (organization_id,employee_id,latitude,longitude,accuracy_meters) VALUES ($1,$2,$3,$4,$5)',[session.org,session.employeeId,input.latitude,input.longitude,input.accuracy||null]);return send(res,201,{recorded:true})
+    const session=await sessionFor(req),input=body(req,z.object({latitude:z.number().gte(-90).lte(90),longitude:z.number().gte(-180).lte(180),accuracy:z.number().nonnegative().optional()}));if(!session.employeeId)throw new ApiError(400,'EMPLOYEE_REQUIRED','Akun belum ditautkan ke karyawan. Tambahkan data karyawan dengan email akun ini, lalu coba lagi.');const owned=await pool!.query('SELECT id FROM employees WHERE id=$1 AND organization_id=$2 AND is_active=true',[session.employeeId,session.org]);if(!owned.rowCount)throw new ApiError(404,'EMPLOYEE_NOT_FOUND','Karyawan tertaut tidak ditemukan.');await pool!.query('INSERT INTO location_points (organization_id,employee_id,latitude,longitude,accuracy_meters) VALUES ($1,$2,$3,$4,$5)',[session.org,session.employeeId,input.latitude,input.longitude,input.accuracy||null]);return send(res,201,{recorded:true})
   }
 
   if(path==='/shift-types'&&method==='GET'){
