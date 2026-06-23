@@ -43,6 +43,25 @@ Default test memakai `https://absen-bice-phi.vercel.app`. Untuk URL lain di Powe
 $env:PLAYWRIGHT_BASE_URL="https://url-anda.vercel.app"; npm run test:e2e
 ```
 
+## Login Google
+
+GitHub login tidak digunakan. Untuk mengaktifkan Google login, buat OAuth Client di Google Cloud dengan redirect URI:
+
+```text
+https://domain-anda.vercel.app/api/auth/google/callback
+```
+
+Lalu set environment variable Vercel Production:
+
+```env
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_REDIRECT_URI=https://domain-anda.vercel.app/api/auth/google/callback
+APP_ORIGIN=https://domain-anda.vercel.app
+```
+
+Google login hanya menerima email yang sudah terdaftar sebagai user di Hadirin AI.
+
 ## Deploy Vercel
 
 Panduan lengkap tersedia di [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Ringkasnya:

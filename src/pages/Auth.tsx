@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import {
-  Building2, Check, ChevronDown, ChevronRight, Eye, EyeOff, GitBranch,
+  Building2, Check, ChevronDown, ChevronRight, Eye, EyeOff,
   LoaderCircle, LockKeyhole, Mail, Search, Server, Sparkles, UserRound, X,
 } from 'lucide-react'
 import { Avatar, Badge, Card, EmptyState } from '../components'
@@ -30,9 +30,25 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: Sessio
     }
   }, [])
 
-  useEffect(() => { void check() }, [check])
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const oauthError = params.get('oauth_error')
+    if (oauthError) {
+      setError(oauthError)
+      params.delete('oauth_error')
+      const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}${window.location.hash}`
+      window.history.replaceState(null, '', next)
+    }
+    void check()
+  }, [check])
 
   const saveServer = async () => { setApiBase(server); await check(); setShowServer(false) }
+
+  const startGoogleLogin = () => {
+    const base = getApiBase()
+    const returnTo = window.location.origin
+    window.location.assign(`${base}/api/auth/google/start?returnTo=${encodeURIComponent(returnTo)}`)
+  }
 
   const submit = async (e: FormEvent) => {
     e.preventDefault(); setBusy(true); setError('')
@@ -79,8 +95,7 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: Sessio
           </div>
           {configured === true && (
             <div className="oauth-buttons">
-              <button disabled title="Aktifkan OAuth provider di server"><span className="google-g">G</span> Google</button>
-              <button disabled title="Aktifkan OAuth provider di server"><GitBranch size={17} /> GitHub</button>
+              <button type="button" onClick={startGoogleLogin}><span className="google-g">G</span> Google</button>
             </div>
           )}
           {configured === true && <div className="or-divider"><span />atau masuk dengan email<span /></div>}

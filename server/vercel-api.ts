@@ -2,7 +2,7 @@
 
 import { Pool, type PoolClient } from '@neondatabase/serverless'
 import { compare, hash } from 'bcryptjs'
-import { SignJWT, jwtVerify } from 'jose'
+import { createRemoteJWKSet, SignJWT, jwtVerify } from 'jose'
 import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 
@@ -26,6 +26,8 @@ export const config = { maxDuration: 30 }
 const connectionString = process.env.DATABASE_URL
 const pool = connectionString ? new Pool({ connectionString }) : null
 let schemaPromise: Promise<void> | null = null
+const googleJwks = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'))
+const googleIssuers = new Set(['https://accounts.google.com', 'accounts.google.com'])
 
 const schemaSql = `
 CREATE TABLE IF NOT EXISTS organizations (
@@ -145,6 +147,151 @@ async function issueToken(session: Session) {
   return new SignJWT(session).setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setExpirationTime('7d').setSubject(session.uid).sign(secret())
 }
 
+function requestOrigin(req: VercelRequest) {
+  const host = req.headers['x-forwarded-host'] || req.headers.host
+  const proto = req.headers['x-forwarded-proto'] || (host?.includes('localhost') ? 'http' : 'https')
+  if (!host) return 'http://localhost:5173'
+  return `${String(proto).split(',')[0]}://${String(host).split(',')[0]}`
+}
+
+function requestUrl(req: VercelRequest) {
+  return new URL(req.url || '/', requestOrigin(req))
+}
+
+function normalizeOrigin(value?: string | null) {
+  if (!value) return null
+  try { return new URL(value).origin } catch { return null }
+}
+
+function allowedReturnTo(req: VercelRequest, value?: string | null) {
+  const fallback = requestOrigin(req)
+  const allowed = new Set(
+    [fallback, process.env.APP_ORIGIN, ...(process.env.OAUTH_ALLOWED_ORIGINS || '').split(',')]
+      .map(v => normalizeOrigin(v))
+      .filter((v): v is string => Boolean(v)),
+  )
+  const origin = normalizeOrigin(value) || fallback
+  return allowed.has(origin) ? origin : fallback
+}
+
+function redirect(res: VercelResponse, location: string) {
+  res.setHeader('Location', location)
+  return res.status(302).end()
+}
+
+function oauthRedirectUri(req: VercelRequest) {
+  return process.env.GOOGLE_REDIRECT_URI || `${requestOrigin(req)}/api/auth/google/callback`
+}
+
+function googleConfig() {
+  const clientId = process.env.GOOGLE_CLIENT_ID
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET
+  return clientId && clientSecret ? { clientId, clientSecret } : null
+}
+
+function oauthErrorUrl(returnTo: string, message: string) {
+  const target = new URL(returnTo)
+  target.searchParams.set('oauth_error', message)
+  return target.toString()
+}
+
+async function googleState(returnTo: string, nonce: string) {
+  return new SignJWT({ provider: 'google', returnTo, nonce })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('10m')
+    .sign(secret())
+}
+
+async function returnToFromState(req: VercelRequest, state?: string | null) {
+  if (!state) return allowedReturnTo(req, null)
+  try {
+    const verified = await jwtVerify(state, secret())
+    const returnTo = typeof verified.payload.returnTo === 'string' ? verified.payload.returnTo : null
+    return allowedReturnTo(req, returnTo)
+  } catch {
+    return allowedReturnTo(req, null)
+  }
+}
+
+async function startGoogleOAuth(req: VercelRequest, res: VercelResponse) {
+  const url = requestUrl(req)
+  const returnTo = allowedReturnTo(req, url.searchParams.get('returnTo'))
+  const config = googleConfig()
+  if (!config) return redirect(res, oauthErrorUrl(returnTo, 'Google OAuth belum dikonfigurasi di server.'))
+
+  const nonce = randomUUID()
+  const state = await googleState(returnTo, nonce)
+  const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth')
+  authUrl.searchParams.set('client_id', config.clientId)
+  authUrl.searchParams.set('redirect_uri', oauthRedirectUri(req))
+  authUrl.searchParams.set('response_type', 'code')
+  authUrl.searchParams.set('scope', 'openid email profile')
+  authUrl.searchParams.set('state', state)
+  authUrl.searchParams.set('nonce', nonce)
+  authUrl.searchParams.set('prompt', 'select_account')
+  return redirect(res, authUrl.toString())
+}
+
+async function finishGoogleOAuth(req: VercelRequest, res: VercelResponse) {
+  const url = requestUrl(req)
+  const state = url.searchParams.get('state')
+  const returnTo = await returnToFromState(req, state)
+
+  try {
+    const config = googleConfig()
+    if (!config) throw new ApiError(503, 'GOOGLE_OAUTH_NOT_CONFIGURED', 'Google OAuth belum dikonfigurasi di server.')
+    const code = url.searchParams.get('code')
+    if (url.searchParams.get('error')) throw new ApiError(400, 'GOOGLE_OAUTH_CANCELLED', 'Login Google dibatalkan.')
+    if (!code || !state) throw new ApiError(400, 'GOOGLE_OAUTH_INVALID_CALLBACK', 'Callback Google tidak lengkap.')
+
+    const stateResult = await jwtVerify(state, secret())
+    if (stateResult.payload.provider !== 'google' || typeof stateResult.payload.nonce !== 'string') {
+      throw new ApiError(400, 'GOOGLE_OAUTH_INVALID_STATE', 'Sesi login Google tidak valid.')
+    }
+
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: config.clientId,
+        client_secret: config.clientSecret,
+        redirect_uri: oauthRedirectUri(req),
+        grant_type: 'authorization_code',
+      }),
+    })
+    const tokenPayload = await tokenResponse.json() as { id_token?: string; error_description?: string }
+    if (!tokenResponse.ok || !tokenPayload.id_token) {
+      throw new ApiError(401, 'GOOGLE_OAUTH_TOKEN_FAILED', tokenPayload.error_description || 'Token Google tidak dapat diverifikasi.')
+    }
+
+    const verified = await jwtVerify(tokenPayload.id_token, googleJwks, { audience: config.clientId })
+    const googlePayload = verified.payload
+    if (!googleIssuers.has(String(googlePayload.iss))) throw new ApiError(401, 'GOOGLE_OAUTH_INVALID_ISSUER', 'Issuer Google tidak valid.')
+    if (googlePayload.nonce !== stateResult.payload.nonce) throw new ApiError(401, 'GOOGLE_OAUTH_INVALID_NONCE', 'Sesi login Google tidak cocok.')
+    const email = typeof googlePayload.email === 'string' ? googlePayload.email.toLowerCase() : ''
+    if (!email || (googlePayload.email_verified !== true && googlePayload.email_verified !== 'true')) {
+      throw new ApiError(401, 'GOOGLE_EMAIL_NOT_VERIFIED', 'Email Google belum terverifikasi.')
+    }
+
+    const result = await pool!.query('SELECT id,organization_id,email,full_name,role,employee_id,status FROM users WHERE lower(email)=lower($1) AND status=$2', [email, 'active'])
+    if (!result.rowCount) throw new ApiError(403, 'GOOGLE_EMAIL_NOT_REGISTERED', 'Email Google belum terdaftar di Hadirin AI.')
+    if (result.rowCount > 1) throw new ApiError(409, 'GOOGLE_EMAIL_AMBIGUOUS', 'Email Google terdaftar di lebih dari satu organisasi.')
+    const user = result.rows[0]
+    await pool!.query('UPDATE users SET last_login_at=now() WHERE id=$1', [user.id])
+    const session: Session = { uid: user.id, org: user.organization_id, role: user.role, name: user.full_name, employeeId: user.employee_id }
+    const token = await issueToken(session)
+    res.setHeader('Set-Cookie', `hadirin_session=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800`)
+    const target = new URL(returnTo)
+    target.searchParams.set('oauth_token', token)
+    return redirect(res, target.toString())
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Login Google gagal.'
+    return redirect(res, oauthErrorUrl(returnTo, message))
+  }
+}
+
 function tokenFrom(req: VercelRequest) {
   const header = req.headers.authorization
   if (header?.startsWith('Bearer ')) return header.slice(7)
@@ -225,6 +372,10 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     const result = await pool!.query('SELECT EXISTS(SELECT 1 FROM users) AS configured')
     return send(res, 200, { configured: result.rows[0].configured, database: 'connected' })
   }
+
+  if (method === 'GET' && path === '/auth/google/start') return startGoogleOAuth(req, res)
+
+  if (method === 'GET' && path === '/auth/google/callback') return finishGoogleOAuth(req, res)
 
   if (method === 'POST' && path === '/setup') {
     const input = body(req, z.object({ organizationName: z.string().min(2), fullName: z.string().min(2) }).merge(credentialsSchema))

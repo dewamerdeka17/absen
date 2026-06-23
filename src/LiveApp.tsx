@@ -37,7 +37,15 @@ export default function LiveApp() {
   const notify = (text: string, error = false) => setToast({ text, error })
 
   const bootstrap = useCallback(async () => {
-    if (!hasToken()) { setBooting(false); return }
+    const params = new URLSearchParams(window.location.search)
+    const oauthToken = params.get('oauth_token')
+    if (oauthToken) {
+      setToken(oauthToken)
+      params.delete('oauth_token')
+      const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}${window.location.hash}`
+      window.history.replaceState(null, '', next)
+    }
+    if (!oauthToken && !hasToken()) { setBooting(false); return }
     try {
       const me = await api<{ user: Session; organization: Organization }>('/me')
       setUser(me.user)
