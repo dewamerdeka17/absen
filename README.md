@@ -28,6 +28,21 @@ npm run build
 npm run check:api
 ```
 
+## Test browser
+
+Playwright sudah dikonfigurasi untuk smoke test production. Browser Chromium bisa disiapkan dengan:
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+Default test memakai `https://absen-bice-phi.vercel.app`. Untuk URL lain di PowerShell:
+
+```powershell
+$env:PLAYWRIGHT_BASE_URL="https://url-anda.vercel.app"; npm run test:e2e
+```
+
 ## Deploy Vercel
 
 Panduan lengkap tersedia di [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Ringkasnya:
@@ -64,4 +79,3 @@ APK berada di `android/app/build/outputs/apk/debug/app-debug.apk`. Kamera, GPS, 
 - `android/` — proyek Android Studio
 - `database/schema.sql` — skema referensi PostgreSQL lengkap
 - `docs/api-spec.md` — kontrak API tingkat produk
-
