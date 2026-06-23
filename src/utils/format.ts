@@ -5,8 +5,12 @@ export const initials = (name: string) => name.split(/\s+/).slice(0, 2).map(x =>
 export const time = (value?: string) =>
   value ? new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }).format(new Date(value)) : '—'
 
-export const dateText = (value: string) =>
-  new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Jakarta' }).format(new Date(`${value}T12:00:00+07:00`))
+export const dateText = (value: string) => {
+  const date = value?.slice(0, 10)
+  return date
+    ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Jakarta' }).format(new Date(`${date}T12:00:00+07:00`))
+    : '—'
+}
 
 export const rupiah = (value: number | string) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(value) || 0)
