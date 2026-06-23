@@ -1,0 +1,107 @@
+import {
+  Bell, CalendarDays, Check, ChevronDown, ChevronRight, Fingerprint, FileBarChart,
+  LayoutDashboard, LocateFixed, LogOut, Menu, MessageSquareText, Search, Settings,
+  Sparkles, Users, WalletCards, X,
+} from 'lucide-react'
+import { Avatar } from '../components'
+import type { NavId, Session, Organization } from '../types'
+import { initials } from '../utils/format'
+
+const navGroups = [
+  {
+    label: 'UTAMA',
+    items: [
+      { id: 'dashboard' as NavId, label: 'Ringkasan', icon: LayoutDashboard },
+      { id: 'attendance' as NavId, label: 'Absensi', icon: Fingerprint },
+      { id: 'employees' as NavId, label: 'Karyawan', icon: Users },
+      { id: 'roster' as NavId, label: 'Jadwal & Shift', icon: CalendarDays },
+    ],
+  },
+  {
+    label: 'OPERASIONAL',
+    items: [
+      { id: 'payroll' as NavId, label: 'Penggajian', icon: WalletCards },
+      { id: 'reports' as NavId, label: 'Laporan', icon: FileBarChart },
+      { id: 'maps' as NavId, label: 'Live Tracking', icon: LocateFixed },
+    ],
+  },
+]
+
+export const pageTitles: Record<NavId, string> = {
+  dashboard: 'Ringkasan', attendance: 'Absensi', employees: 'Karyawan',
+  roster: 'Jadwal & Shift', payroll: 'Penggajian', reports: 'Laporan',
+  maps: 'Live Tracking', profile: 'Profil', settings: 'Pengaturan',
+}
+
+export function Sidebar({ active, setActive, open, close, user, org, onLogout }: {
+  active: NavId; setActive: (id: NavId) => void; open: boolean; close: () => void
+  user: Session; org: Organization; onLogout: () => void
+}) {
+  const go = (id: NavId) => { setActive(id); close() }
+  return (
+    <>
+      {open && <button className="mobile-overlay" onClick={close} />}
+      <aside className={`sidebar ${open ? 'sidebar-open' : ''}`}>
+        <div className="brand">
+          <span className="brand-mark"><Check size={21} strokeWidth={3} /></span>
+          <span>hadirin<em>ai</em></span>
+          <button className="sidebar-close" onClick={close}><X size={20} /></button>
+        </div>
+        <div className="workspace">
+          <span className="workspace-logo">{org.name[0]?.toUpperCase()}</span>
+          <span><small>Workspace</small><strong>{org.name}</strong></span>
+          <ChevronDown size={16} />
+        </div>
+        <nav>
+          {navGroups.map(group => (
+            <div className="nav-group" key={group.label}>
+              <p>{group.label}</p>
+              {group.items
+                .filter(item => user.role === 'admin' || !['employees', 'payroll', 'reports'].includes(item.id))
+                .map(item => {
+                  const Icon = item.icon
+                  return (
+                    <button key={item.id} className={active === item.id ? 'active' : ''} onClick={() => go(item.id)}>
+                      <Icon size={19} /><span>{item.label}</span>
+                    </button>
+                  )
+                })}
+            </div>
+          ))}
+        </nav>
+        <div className="ai-card">
+          <span><Sparkles size={17} /></span>
+          <strong>Roster otomatis</strong>
+          <p>Buat jadwal adil dari data karyawan dan shift.</p>
+          <button onClick={() => go('roster')}>Buka roster <ChevronRight size={14} /></button>
+        </div>
+        <div className="user-card">
+          <Avatar initials={initials(user.name)} color="#dbeafe" />
+          <span><strong>{user.name}</strong><small>{user.role === 'admin' ? 'Administrator' : 'Karyawan'}</small></span>
+          <button onClick={onLogout}><LogOut size={17} /></button>
+        </div>
+      </aside>
+    </>
+  )
+}
+
+export function Header({ active, menu, setSearch, search }: {
+  active: NavId; menu: () => void; setSearch: (v: string) => void; search: string
+}) {
+  return (
+    <header className="topbar">
+      <button className="menu-button" onClick={menu}><Menu size={22} /></button>
+      <label className="global-search">
+        <Search size={18} />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari karyawan..." />
+        <kbd>⌘ K</kbd>
+      </label>
+      <div className="top-actions">
+        <button className="top-status"><span />Database terhubung</button>
+        <button className="icon-button"><MessageSquareText size={19} /></button>
+        <button className="icon-button notify"><Bell size={19} /></button>
+      </div>
+      <span className="mobile-title">{pageTitles[active]}</span>
+    </header>
+  )
+}

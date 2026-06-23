@@ -1,0 +1,33 @@
+@supports (padding-top: env(safe-area-inset-top)) {
+  .topbar {
+    height: calc(73px + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .sidebar {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .modal-backdrop {
+    padding-top: calc(20px + env(safe-area-inset-top));
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+
+  .login-panel {
+    padding-top: calc(45px + env(safe-area-inset-top));
+    padding-bottom: calc(45px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 760px) {
+  @supports (padding-top: env(safe-area-inset-top)) {
+    .topbar {
+      height: calc(62px + env(safe-area-inset-top));
+    }
+
+    .login-panel {
+      padding-top: calc(28px + env(safe-area-inset-top));
+      padding-bottom: calc(28px + env(safe-area-inset-bottom));
+    }
+  }
+}

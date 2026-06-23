@@ -1,0 +1,88 @@
+html,
+body,
+#root,
+.app-shell,
+.main-shell {
+  max-width: 100%;
+}
+
+.main-shell,
+main,
+.page-heading > div:first-child {
+  min-width: 0;
+}
+
+@media (max-width: 760px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  .main-shell,
+  main {
+    width: 100vw;
+  }
+
+  .topbar {
+    position: sticky;
+    justify-content: flex-start;
+  }
+
+  .mobile-title {
+    position: absolute;
+    left: 50%;
+    max-width: 42%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+
+  .top-actions {
+    position: absolute;
+    right: 14px;
+  }
+
+  .top-actions .icon-button:not(.notify) {
+    display: none;
+  }
+
+  .page-heading,
+  .metrics-grid,
+  .dashboard-grid,
+  .lower-grid,
+  .card {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .page-heading,
+  .metrics-grid,
+  .dashboard-grid,
+  .lower-grid {
+    width: calc(100vw - 30px);
+  }
+
+  .metrics-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .heading-actions .button {
+    width: 39px;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .heading-actions .button svg {
+    width: 18px;
+  }
+
+  .bottom-nav {
+    max-width: 100%;
+    overflow: hidden;
+    width: 100vw;
+  }
+
+  .bottom-nav button {
+    min-width: 45px;
+  }
+}
