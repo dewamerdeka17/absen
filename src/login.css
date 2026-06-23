@@ -429,3 +429,223 @@
     font-size: 23px;
   }
 }
+
+/* IdenTime auth layout */
+.login-page {
+  grid-template-columns: minmax(420px, .92fr) minmax(460px, 1fr);
+  background: #f7f9fb;
+}
+
+.login-showcase {
+  padding: 34px 46px;
+  background:
+    linear-gradient(145deg, #071f44 0%, #0a3d5f 56%, #0b858c 100%);
+}
+
+.login-showcase::after {
+  content: "";
+  position: absolute;
+  right: -150px;
+  top: 70px;
+  width: 420px;
+  height: 420px;
+  border: 1px solid #ffffff24;
+  clip-path: polygon(25% 6%, 75% 6%, 100% 50%, 75% 94%, 25% 94%, 0 50%);
+  transform: rotate(18deg);
+}
+
+.login-brand,
+.mobile-login-brand {
+  font: inherit;
+  gap: 0;
+}
+
+.login-brand .identime-mark {
+  width: 42px;
+  height: 42px;
+}
+
+.login-brand .identime-name {
+  font-size: 25px;
+}
+
+.login-brand .identime-copy small {
+  color: #d6fffb;
+}
+
+.showcase-copy {
+  width: min(560px, 92%);
+}
+
+.showcase-copy .badge {
+  color: #d7fffb;
+  background: #ffffff12;
+  border-color: #ffffff24;
+}
+
+.showcase-copy h1 {
+  font-size: 58px;
+  letter-spacing: 0;
+}
+
+.showcase-copy h1 span {
+  color: #62f0e8;
+}
+
+.showcase-copy > p {
+  color: #d8e6f4;
+}
+
+.showcase-stats {
+  gap: 30px;
+  flex-wrap: wrap;
+}
+
+.showcase-stats span,
+.showcase-foot {
+  color: #c6d7e7;
+}
+
+.login-grid {
+  opacity: .08;
+  background-size: 46px 46px;
+}
+
+.login-orb {
+  display: none;
+}
+
+.login-panel {
+  padding: 42px;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f7fbfb 100%);
+}
+
+.login-heading h2 {
+  color: #071f44;
+  letter-spacing: 0;
+}
+
+.oauth-buttons {
+  grid-template-columns: 1fr;
+  margin-top: 24px;
+}
+
+.oauth-buttons button {
+  border-radius: 8px;
+}
+
+.oauth-buttons button:hover {
+  background: #f2fbfb;
+  border-color: #b9e9e8;
+}
+
+.field {
+  border-radius: 8px;
+}
+
+.field:focus-within {
+  border-color: #12aeb2;
+  box-shadow: 0 0 0 3px #12aeb21a;
+}
+
+.login-options input {
+  accent-color: #12aeb2;
+}
+
+.login-options button {
+  color: #0b858c;
+}
+
+.login-submit {
+  border-radius: 8px;
+  background: #12aeb2;
+  box-shadow: 0 6px 17px #12aeb22b;
+}
+
+.login-submit:hover {
+  background: #0b858c;
+}
+
+.server-config button {
+  background: #12aeb2;
+}
+
+.mobile-login-brand .identime-logo {
+  color: #071f44;
+}
+
+@media (max-width: 1200px) and (min-width: 901px) {
+  .login-page {
+    grid-template-columns: minmax(360px, .86fr) minmax(410px, 1fr);
+  }
+
+  .login-showcase {
+    padding: 30px;
+  }
+
+  .showcase-copy h1 {
+    font-size: 46px;
+  }
+
+  .showcase-copy > p {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 900px) {
+  .login-page {
+    grid-template-columns: 1fr;
+    overflow-x: hidden;
+  }
+
+  .login-panel {
+    min-height: 100vh;
+    place-items: center;
+    align-content: center;
+    padding: 88px 28px 32px;
+    background:
+      linear-gradient(180deg, #eefbfb 0, #ffffff 42%);
+  }
+
+  .mobile-login-brand {
+    gap: 0;
+    color: #071f44;
+  }
+
+  .mobile-login-brand em {
+    color: #12aeb2;
+  }
+
+  .login-box {
+    width: min(390px, 100%);
+    border-radius: 8px;
+  }
+}
+
+@media (max-width: 520px) {
+  .login-panel {
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    padding: 22px 16px 24px;
+  }
+
+  .mobile-login-brand {
+    position: static;
+    margin-bottom: 14px;
+  }
+
+  .login-box {
+    width: 100%;
+    max-width: 100%;
+    padding: 22px 16px;
+    box-shadow: 0 10px 30px #0a2f6310;
+  }
+
+  .oauth-buttons {
+    margin-top: 20px;
+  }
+}

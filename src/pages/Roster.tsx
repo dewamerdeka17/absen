@@ -30,7 +30,7 @@ function ShiftForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
           <label>Mulai<input type="time" name="startTime" required /></label>
           <label>Selesai<input type="time" name="endTime" required /></label>
           <label>Toleransi (menit)<input type="number" name="graceMinutes" min="0" defaultValue="10" /></label>
-          <label>Warna<input type="color" name="color" defaultValue="#246bfd" /></label>
+          <label>Warna<input type="color" name="color" defaultValue="#12aeb2" /></label>
         </div>
         {error && <p className="form-error">{error}</p>}
         <div className="modal-actions">

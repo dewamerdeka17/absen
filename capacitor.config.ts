@@ -2,11 +2,11 @@ import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
   appId: 'id.hadirin.ai',
-  appName: 'Hadirin AI',
+  appName: 'IdenTime',
   webDir: 'dist',
-  backgroundColor: '#f4f6fa',
+  backgroundColor: '#f7f9fb',
   android: {
-    backgroundColor: '#f4f6fa',
+    backgroundColor: '#f7f9fb',
     allowMixedContent: false,
     captureInput: true,
   },

@@ -5,3 +5,109 @@
 @media(max-width:1100px){.metrics-grid{grid-template-columns:repeat(2,1fr)}.dashboard-grid,.lower-grid{grid-template-columns:1fr}.report-grid{grid-template-columns:repeat(2,1fr)}.map-layout{grid-template-columns:1fr}.fake-map{height:400px}.quick-grid button{height:80px}}
 @media(max-width:760px){body{background:#f5f7fb}.sidebar{transform:translateX(-105%);transition:transform .22s ease;box-shadow:10px 0 40px #17203324}.sidebar-open{transform:translateX(0)}.sidebar-close{display:block}.mobile-overlay{display:block;position:fixed;inset:0;border:0;background:#17203370;z-index:25}.main-shell{margin-left:0}.topbar{height:62px;padding:0 16px;justify-content:space-between}.menu-button{display:grid;place-items:center;border:0;background:none;padding:5px;color:#47536a}.mobile-title{display:block;font:700 14px 'Manrope'}.global-search,.top-status,.top-actions .icon-button:first-of-type{display:none}.top-actions{margin:0}.top-actions .notify{display:grid;border:0;background:none}.top-actions:after{content:"DS";width:31px;height:31px;background:#dbeafe;color:#27558b;font-size:9px;font-weight:700;border-radius:50%;display:grid;place-items:center}.top-actions{gap:2px}main{padding:20px 15px 95px}.page-heading{margin-bottom:18px}.page-heading h1{font-size:21px}.page-heading p{font-size:10px;line-height:1.5}.heading-actions .secondary{display:none}.button{height:37px;padding:0 12px}.metrics-grid{grid-template-columns:1fr 1fr;gap:10px}.metric-card{padding:14px}.metric-icon{margin-bottom:11px}.metric-value-row{align-items:flex-end}.metric-value-row strong{font-size:21px}.metric-value-row span{display:none}.dashboard-grid,.lower-grid{display:block}.dashboard-grid>.card,.lower-grid>.card{margin-bottom:11px}.trend-card{overflow:hidden}.legend span{display:none}.chart-wrap{height:190px}.bars{height:155px}.chart-labels{height:155px}.chart-wrap:after{bottom:24px}.donut-wrap{justify-content:flex-start}.activity-card{padding:16px}.activity-item>span b{display:none}.quick-grid{grid-template-columns:1fr 1fr}.bottom-nav{position:fixed;z-index:21;bottom:0;left:0;right:0;height:72px;padding:5px 10px max(5px,env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--border);display:flex;justify-content:space-around;align-items:center}.bottom-nav button{border:0;background:none;color:#8992a4;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:8px;min-width:55px}.bottom-nav button.active{color:var(--blue)}.bottom-nav small{font-size:8px}.bottom-nav .scan-nav{position:relative;top:-13px;color:#fff}.bottom-nav .scan-nav span{width:49px;height:49px;border-radius:50%;display:grid;place-items:center;background:var(--blue);border:5px solid #f5f7fb;box-shadow:0 5px 14px #246bfd40}.bottom-nav .scan-nav small{color:#677388}.roster-summary{grid-template-columns:1fr}.toolbar label{min-width:150px}.toolbar{overflow:auto}.report-grid{grid-template-columns:1fr}.fake-map{height:360px}.form-grid,.settings-form{grid-template-columns:1fr}.settings-form{padding:10px 20px 30px}.modal{max-height:92vh;overflow:auto}.payroll-banner{padding:18px}.payroll-banner strong{font-size:18px}.payroll-banner>svg{display:none}.page-heading .heading-actions{flex-shrink:0}.topbar+.content{} }
 @media(max-width:420px){.metrics-grid{gap:8px}.metric-card{padding:12px}.metric-icon{width:34px;height:34px}.metric-card p{font-size:9px}.metric-value-row strong{font-size:19px}.page-heading{align-items:center}.page-heading p{max-width:220px}.heading-actions .button{font-size:0;width:38px;padding:0}.heading-actions .button svg{width:18px}.donut-wrap{gap:17px}.donut{width:111px;height:111px}.donut:after{width:72px;height:72px}.quick-grid{gap:7px}.quick-grid button{padding:10px}.activity-item p{max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
+
+/* IdenTime brand system from Stitch */
+:root{
+  --brand-navy:#0a2f63;
+  --brand-navy-dark:#071f44;
+  --brand-teal:#12aeb2;
+  --brand-teal-dark:#0b858c;
+  --brand-teal-soft:#e7fbfb;
+  --blue:var(--brand-teal);
+  --blue-dark:var(--brand-teal-dark);
+  --blue-light:var(--brand-teal-soft);
+  --navy:var(--brand-navy-dark);
+  --border:#e2e8f0;
+  --muted:#667085;
+  --radius-lg:8px;
+  --shadow:0 1px 2px #0a2f6308;
+  --shadow-md:0 8px 24px #0a2f6312;
+}
+
+body{background:#f7f9fb;color:var(--brand-navy-dark)}
+.brand,.page-heading h1,.login-heading h2,.showcase-copy h1,.nav-group>p,th,.identime-name,.identime-copy small{letter-spacing:0}
+.identime-logo{display:inline-flex;align-items:center;gap:10px;min-width:0;color:var(--brand-navy);line-height:1}
+.identime-mark{display:grid;place-items:center;width:38px;height:38px;flex:0 0 auto}
+.identime-mark svg{display:block;width:100%;height:100%;overflow:visible}
+.identime-hex,.identime-clock,.identime-print,.identime-hand,.identime-tick{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.identime-hex{stroke-width:4.4}
+.identime-hex-navy{stroke:var(--brand-navy)}
+.identime-hex-teal{stroke:var(--brand-teal)}
+.identime-clock{stroke:var(--brand-navy);stroke-width:3.1}
+.identime-print{stroke:var(--brand-navy);stroke-width:2.8}
+.identime-hand,.identime-tick{stroke:var(--brand-teal);stroke-width:3}
+.identime-center{fill:var(--brand-navy)}
+.identime-copy{display:flex;min-width:0;flex-direction:column;gap:2px}
+.identime-name{display:block;font:800 24px/1 'Manrope',sans-serif;white-space:nowrap}
+.identime-name span{color:var(--brand-navy)}
+.identime-name em{color:var(--brand-teal);font-style:normal}
+.identime-copy small{color:var(--brand-navy);font-size:7px;font-weight:800;text-transform:uppercase;white-space:nowrap}
+.identime-logo-compact .identime-mark{width:34px;height:34px}
+.identime-logo-compact .identime-name{font-size:21px}
+.identime-logo-compact .identime-copy small{display:none}
+.identime-logo-mark-only .identime-mark{width:46px;height:46px}
+.identime-logo-inverse .identime-hex-navy,.identime-logo-inverse .identime-clock,.identime-logo-inverse .identime-print{stroke:#ffffff}
+.identime-logo-inverse .identime-hex-teal,.identime-logo-inverse .identime-hand,.identime-logo-inverse .identime-tick{stroke:#62f0e8}
+.identime-logo-inverse .identime-center{fill:#ffffff}
+.identime-logo-inverse .identime-name span,.identime-logo-inverse .identime-copy small{color:#ffffff}
+.identime-logo-inverse .identime-name em{color:#62f0e8}
+
+.sidebar{background:#ffffff;border-right-color:var(--border)}
+.brand{padding:0 8px;font-size:inherit}
+.brand .identime-logo{width:100%}
+.brand .sidebar-close{flex:0 0 auto}
+.workspace{border-radius:8px;background:#f8fafc;border-color:var(--border)}
+.workspace-logo{background:var(--brand-navy);clip-path:polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0 50%);border-radius:0}
+.nav-group button.active{background:#e8fbfb;color:#087c83}
+.nav-group button:hover{background:#f2fbfb;color:var(--brand-navy)}
+.ai-card{border-color:#c8f3f2;background:linear-gradient(145deg,#f0fdfa,#f8fafc);border-radius:8px}
+.ai-card>span{background:#ddfbf7;color:var(--brand-teal-dark)}
+.ai-card button,.text-button,.roster-summary button{color:var(--brand-teal-dark)}
+.button.primary,.bottom-nav .scan-nav span{background:var(--brand-teal);box-shadow:0 5px 14px #12aeb229}
+.button.primary:hover{background:var(--brand-teal-dark)}
+.badge-blue{color:#087c83;background:#e7fbfb}
+.top-status{border-color:#c9f1de;background:#f1fbf6;color:#25734d}
+.top-actions:after{content:"IT"!important;background:#e7fbfb!important;color:#087c83!important}
+.card,.quick-grid button,.metric-icon,.workspace,.icon-button,.modal,.face-frame,.native-camera,.error-box{border-radius:8px}
+.metric-icon,.report-icon,.empty-state>span,.payroll-banner>div>span,.modal-title>span{border-radius:8px}
+.payroll-banner{border-radius:8px;background:linear-gradient(112deg,var(--brand-navy) 0%,#0d5d75 58%,var(--brand-teal) 100%)}
+.payroll-banner:after{right:-54px;top:-84px;width:200px;height:200px;border:28px solid #ffffff14;border-radius:8px;clip-path:polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0 50%);transform:rotate(18deg)}
+.table-scroll{border-radius:0 0 8px 8px}
+tbody tr:nth-child(even){background:#fbfdff}
+.modal{border-radius:8px}
+
+@media(min-width:761px) and (max-width:1180px){
+  .sidebar{width:224px;padding:0 12px}
+  .main-shell{margin-left:224px}
+  .brand{height:68px}
+  .identime-logo-compact .identime-mark{width:31px;height:31px}
+  .identime-logo-compact .identime-name{font-size:19px}
+  .nav-group button{height:39px;font-size:12px;gap:10px}
+  .topbar{height:68px;padding:0 22px}
+  .global-search{width:min(340px,36vw)}
+  main{padding:24px 22px 40px}
+  .metrics-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dashboard-grid,.lower-grid,.map-layout{grid-template-columns:1fr}
+  .report-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .page-heading{gap:14px}
+}
+
+@media(max-width:760px){
+  .sidebar{width:min(300px,86vw)}
+  .identime-logo-compact .identime-name{font-size:20px}
+  .topbar{background:#ffffff}
+  .mobile-title{font-size:14px;letter-spacing:0}
+  .bottom-nav{height:74px}
+  .bottom-nav button{font-size:9px}
+  .metrics-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .quick-grid button{border-radius:8px}
+}
+
+@media(max-width:520px){
+  .page-heading{align-items:flex-start;flex-direction:column}
+  .page-heading p{max-width:none}
+  .heading-actions{width:100%}
+  .heading-actions .button{flex:1;min-width:0}
+  .metrics-grid{grid-template-columns:1fr}
+  .quick-grid{grid-template-columns:1fr}
+}

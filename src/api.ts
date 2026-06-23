@@ -68,7 +68,7 @@ export async function downloadCsv(filename: string, rows: Record<string, unknown
   const csv = [columns.map(escape).join(','), ...rows.map(row => columns.map(column => escape(row[column])).join(','))].join('\n')
   if (Capacitor.isNativePlatform()) {
     const saved = await Filesystem.writeFile({ path: filename, data: `\ufeff${csv}`, directory: Directory.Cache, encoding: Encoding.UTF8 })
-    await Share.share({ title: filename, text: 'Laporan Hadirin AI', files: [saved.uri], dialogTitle: 'Bagikan laporan' })
+    await Share.share({ title: filename, text: 'Laporan IdenTime', files: [saved.uri], dialogTitle: 'Bagikan laporan' })
     return
   }
   const url = URL.createObjectURL(new Blob(['\ufeff', csv], { type: 'text/csv;charset=utf-8' }))

@@ -1,4 +1,4 @@
-# Hadirin AI
+# IdenTime
 
 Aplikasi attendance dan HR berbasis React, Vercel Functions, Neon PostgreSQL, dan Capacitor Android. Data demo telah dihapus; deployment baru selalu dimulai dari onboarding administrator dan database kosong.
 
@@ -60,7 +60,7 @@ GOOGLE_REDIRECT_URI=https://domain-anda.vercel.app/api/auth/google/callback
 APP_ORIGIN=https://domain-anda.vercel.app
 ```
 
-Google login hanya menerima email yang sudah terdaftar sebagai user di Hadirin AI.
+Google login hanya menerima email yang sudah terdaftar sebagai user di IdenTime.
 
 ## Deploy Vercel
 

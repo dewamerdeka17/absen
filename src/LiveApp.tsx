@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { lazy, Suspense } from 'react'
 import {
-  Camera as CameraIcon, Check, LayoutDashboard, LoaderCircle,
+  Camera as CameraIcon, LayoutDashboard, LoaderCircle,
   Map as MapIcon, Settings, UserRound,
 } from 'lucide-react'
 import { api, hasToken, post, setToken } from './api'
+import { BrandLogo } from './components/BrandLogo'
 import { Sidebar, Header } from './components/Sidebar'
 import { Busy, Toast } from './components/ui'
 import { AuthScreen, SearchResults } from './pages/Auth'
@@ -90,7 +91,7 @@ export default function LiveApp() {
     }
   }, [active, user, org, scanRefresh])
 
-  if (booting) return <div className="app-boot"><span className="brand-mark"><Check /></span><LoaderCircle className="spin" /></div>
+  if (booting) return <div className="app-boot"><BrandLogo markOnly /><LoaderCircle className="spin" /></div>
 
   if (!user || !org) return <AuthScreen onAuthenticated={(u, o) => { setUser(u); setOrg(o) }} />
 

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import {
-  Building2, Check, ChevronDown, ChevronRight, Eye, EyeOff,
+  Building2, ChevronDown, ChevronRight, Eye, EyeOff,
   LoaderCircle, LockKeyhole, Mail, Search, Server, Sparkles, UserRound, X,
 } from 'lucide-react'
 import { Avatar, Badge, Card, EmptyState } from '../components'
+import { BrandLogo } from '../components/BrandLogo'
 import { Busy, ErrorBox } from '../components/ui'
 import { useLoad } from '../hooks/useLoad'
 import { api, getApiBase, post, setApiBase, setToken } from '../api'
@@ -65,28 +66,24 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: Sessio
     <div className="login-page">
       <section className="login-showcase">
         <div className="login-brand">
-          <span className="brand-mark"><Check size={21} strokeWidth={3} /></span>
-          <strong>hadirin<em>ai</em></strong>
+          <BrandLogo inverse />
         </div>
         <div className="showcase-copy">
-          <Badge tone="blue"><Sparkles size={11} /> Attendance & HR workspace</Badge>
-          <h1>Kerja lebih teratur.<br /><span>Data selalu aktual.</span></h1>
-          <p>Absensi, jadwal, dan penggajian tersimpan aman dalam satu ruang kerja yang terhubung.</p>
+          <Badge tone="blue"><Sparkles size={11} /> Authentic Presence</Badge>
+          <h1>Absensi autentik.<br /><span>Operasional terkendali.</span></h1>
+          <p>Kelola kehadiran, jadwal, dan penggajian dengan identitas karyawan yang jelas di satu ruang kerja.</p>
           <div className="showcase-stats">
             <div><strong>Live</strong><span>Database cloud</span></div>
-            <div><strong>AI</strong><span>Roster otomatis</span></div>
+            <div><strong>HR</strong><span>Roster otomatis</span></div>
             <div><strong>24/7</strong><span>Akses web & Android</span></div>
           </div>
         </div>
-        <div className="login-orb orb-one" />
-        <div className="login-orb orb-two" />
         <div className="login-grid" />
         <p className="showcase-foot">Data awal kosong—milik organisasi Anda sepenuhnya.</p>
       </section>
       <section className="login-panel">
         <div className="mobile-login-brand">
-          <span className="brand-mark"><Check size={18} strokeWidth={3} /></span>
-          <strong>hadirin<em>ai</em></strong>
+          <BrandLogo compact tagline={false} />
         </div>
         <div className="login-box">
           <div className="login-heading">
@@ -108,7 +105,7 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: Sessio
             <label>Kata sandi<div className="field"><LockKeyhole size={17} /><input type={showPassword ? 'text' : 'password'} minLength={8} required value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Minimal 8 karakter" /><button type="button" onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>
             {error && <p className="auth-error">{error}</p>}
             <button className="login-submit" disabled={busy || configured === null}>
-              {busy ? <><LoaderCircle className="spin" /> Memproses...</> : <>{configured === false ? 'Buat ruang kerja' : 'Masuk ke Hadirin AI'} <ChevronRight size={17} /></>}
+              {busy ? <><LoaderCircle className="spin" /> Memproses...</> : <>{configured === false ? 'Buat ruang kerja' : 'Masuk ke IdenTime'} <ChevronRight size={17} /></>}
             </button>
           </form>
           <button className="server-toggle" onClick={() => setShowServer(!showServer)}>

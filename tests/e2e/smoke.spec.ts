@@ -20,7 +20,7 @@ test('auth screen renders without a visible runtime error', async ({ page }) => 
 
   await page.goto('/')
 
-  await expect(page).toHaveTitle(/Hadirin AI/)
+  await expect(page).toHaveTitle(/IdenTime/)
   await expect(page.getByRole('heading', { name: /Siapkan ruang kerja|Selamat datang kembali/ })).toBeVisible()
   await expect(page.getByLabel('Email')).toBeVisible()
   await expect(page.getByLabel('Kata sandi')).toBeVisible()

@@ -1,9 +1,10 @@
 import {
-  Bell, CalendarDays, Check, ChevronDown, ChevronRight, Fingerprint, FileBarChart,
+  Bell, CalendarDays, ChevronDown, ChevronRight, Fingerprint, FileBarChart,
   LayoutDashboard, LocateFixed, LogOut, Menu, MessageSquareText, Search, Settings,
   Sparkles, UserRound, Users, WalletCards, X,
 } from 'lucide-react'
 import { Avatar } from '../components'
+import { BrandLogo } from './BrandLogo'
 import type { NavId, Session, Organization } from '../types'
 import { initials } from '../utils/format'
 
@@ -50,8 +51,7 @@ export function Sidebar({ active, setActive, open, close, user, org, onLogout }:
       {open && <button className="mobile-overlay" onClick={close} />}
       <aside className={`sidebar ${open ? 'sidebar-open' : ''}`}>
         <div className="brand">
-          <span className="brand-mark"><Check size={21} strokeWidth={3} /></span>
-          <span>hadirin<em>ai</em></span>
+          <BrandLogo compact />
           <button className="sidebar-close" onClick={close}><X size={20} /></button>
         </div>
         <div className="workspace">

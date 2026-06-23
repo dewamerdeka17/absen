@@ -60,7 +60,7 @@ END $$;
 CREATE TABLE IF NOT EXISTS shift_types (
   id text PRIMARY KEY, organization_id text NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   name text NOT NULL, code text NOT NULL, start_time time NOT NULL, end_time time NOT NULL,
-  grace_minutes integer NOT NULL DEFAULT 0, color text NOT NULL DEFAULT '#246bfd', is_active boolean NOT NULL DEFAULT true,
+  grace_minutes integer NOT NULL DEFAULT 0, color text NOT NULL DEFAULT '#12aeb2', is_active boolean NOT NULL DEFAULT true,
   UNIQUE (organization_id, code)
 );
 CREATE TABLE IF NOT EXISTS shift_assignments (
@@ -276,7 +276,7 @@ async function finishGoogleOAuth(req: VercelRequest, res: VercelResponse) {
     }
 
     const result = await pool!.query('SELECT id,organization_id,email,full_name,role,employee_id,status FROM users WHERE lower(email)=lower($1) AND status=$2', [email, 'active'])
-    if (!result.rowCount) throw new ApiError(403, 'GOOGLE_EMAIL_NOT_REGISTERED', 'Email Google belum terdaftar di Hadirin AI.')
+    if (!result.rowCount) throw new ApiError(403, 'GOOGLE_EMAIL_NOT_REGISTERED', 'Email Google belum terdaftar di IdenTime.')
     if (result.rowCount > 1) throw new ApiError(409, 'GOOGLE_EMAIL_AMBIGUOUS', 'Email Google terdaftar di lebih dari satu organisasi.')
     const user = result.rows[0]
     await pool!.query('UPDATE users SET last_login_at=now() WHERE id=$1', [user.id])
@@ -495,7 +495,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     const session=await sessionFor(req);const result=await pool!.query('SELECT * FROM shift_types WHERE organization_id=$1 AND is_active=true ORDER BY start_time',[session.org]);return send(res,200,result.rows)
   }
   if(path==='/shift-types'&&method==='POST'){
-    const session=await sessionFor(req,true),input=body(req,z.object({name:z.string().min(2),code:z.string().min(1),startTime:z.string(),endTime:z.string(),graceMinutes:z.coerce.number().nonnegative().default(0),color:z.string().default('#246bfd')})),id=randomUUID();await pool!.query('INSERT INTO shift_types (id,organization_id,name,code,start_time,end_time,grace_minutes,color) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',[id,session.org,input.name,input.code,input.startTime,input.endTime,input.graceMinutes,input.color]);return send(res,201,{id})
+    const session=await sessionFor(req,true),input=body(req,z.object({name:z.string().min(2),code:z.string().min(1),startTime:z.string(),endTime:z.string(),graceMinutes:z.coerce.number().nonnegative().default(0),color:z.string().default('#12aeb2')})),id=randomUUID();await pool!.query('INSERT INTO shift_types (id,organization_id,name,code,start_time,end_time,grace_minutes,color) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',[id,session.org,input.name,input.code,input.startTime,input.endTime,input.graceMinutes,input.color]);return send(res,201,{id})
   }
 
   if(path==='/rosters'&&method==='GET'){
