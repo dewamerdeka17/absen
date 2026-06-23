@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
-    "check:api": "tsc --ignoreConfig --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --skipLibCheck --types node \"api/[...route].ts\"",
+    "check:api": "tsc -p tsconfig.api.json",
     "check": "npm run build && npm run check:api",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
