@@ -1,8 +1,9 @@
 import {
   AlarmClock, Bot, BriefcaseBusiness, Camera as CameraIcon, ChevronRight,
-  CircleDollarSign, Clock3, FileBarChart, Plus, UserCheck, Users,
+  CircleDollarSign, Clock3, FileBarChart, Fingerprint, Plus, ShieldCheck, UserCheck, Users,
 } from 'lucide-react'
 import { Avatar, Badge, MetricCard } from '../components'
+import { BrandLogo } from '../components/BrandLogo'
 import { Busy, ErrorBox, PageHeading } from '../components/ui'
 import { useLoad } from '../hooks/useLoad'
 import { api } from '../api'
@@ -14,6 +15,7 @@ export function Dashboard({ go, scan }: { go: (id: NavId) => void; scan: () => v
   if (loading) return <Busy />
   if (error || !data) return <ErrorBox message={error} retry={reload} />
   const m = data.metrics
+  const presentRate = m.employees ? Math.round((m.present / m.employees) * 100) : 0
   return (
     <>
       <PageHeading
@@ -21,6 +23,24 @@ export function Dashboard({ go, scan }: { go: (id: NavId) => void; scan: () => v
         subtitle={`${new Intl.DateTimeFormat('id-ID', { dateStyle: 'full' }).format(new Date())} • Data diperbarui langsung`}
         action={<button className="button primary" onClick={() => go('employees')}><Plus size={18} /> Tambah karyawan</button>}
       />
+      <section className="dashboard-hero">
+        <div className="dashboard-hero-copy">
+          <Badge tone="blue"><ShieldCheck size={12} /> Authentic Presence</Badge>
+          <h2>Kehadiran tervalidasi dalam satu ruang kontrol.</h2>
+          <p>{m.employees} karyawan aktif, {m.present} sudah tercatat hadir, dan {m.absent} masih perlu dipantau hari ini.</p>
+        </div>
+        <div className="presence-score-card">
+          <BrandLogo markOnly />
+          <div>
+            <strong>{presentRate}%</strong>
+            <span>terverifikasi hari ini</span>
+          </div>
+        </div>
+        <div className="dashboard-hero-actions">
+          <button className="button primary" onClick={scan}><Fingerprint size={17} /> Scan absensi</button>
+          <button className="button secondary" onClick={() => go('roster')}><Bot size={17} /> Susun roster</button>
+        </div>
+      </section>
       <div className="metrics-grid">
         <MetricCard icon={<Users />} label="Total karyawan" value={String(m.employees)} note="Aktif" />
         <MetricCard icon={<UserCheck />} label="Hadir hari ini" value={String(m.present)} note={m.employees ? `${Math.round(m.present / m.employees * 100)}%` : '0%'} tone="green" />

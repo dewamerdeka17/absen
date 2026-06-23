@@ -425,7 +425,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
       pool!.query('SELECT count(*)::int AS total FROM employees WHERE organization_id=$1 AND is_active=true',[session.org]),
       pool!.query(`SELECT count(DISTINCT employee_id)::int AS present,
         count(DISTINCT employee_id) FILTER (WHERE status='late')::int AS late
-        FROM attendance_events WHERE organization_id=$1 AND event_type='check_in' AND captured_at::date=(now() AT TIME ZONE 'Asia/Jakarta')::date`,[session.org]),
+        FROM attendance_events WHERE organization_id=$1 AND event_type='check_in' AND (captured_at AT TIME ZONE 'Asia/Jakarta')::date=(now() AT TIME ZONE 'Asia/Jakarta')::date`,[session.org]),
       pool!.query(`SELECT a.id,a.event_type,a.captured_at,a.status,e.full_name,e.job_title
         FROM attendance_events a JOIN employees e ON e.id=a.employee_id WHERE a.organization_id=$1 ORDER BY a.captured_at DESC LIMIT 8`,[session.org]),
       pool!.query(`SELECT count(*)::int AS total FROM shift_swap_requests WHERE organization_id=$1 AND status='pending'`,[session.org]),
@@ -468,7 +468,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   if(path==='/attendance'&&method==='GET'){
     const session=await sessionFor(req); const date=typeof req.query.date==='string'?req.query.date:new Date().toISOString().slice(0,10)
     const result=await pool!.query(`SELECT DISTINCT ON(e.id) e.id AS employee_id,e.full_name,e.job_title,e.department,a.event_type,a.captured_at,a.status,a.latitude,a.longitude
-      FROM employees e LEFT JOIN attendance_events a ON a.employee_id=e.id AND a.captured_at::date=$2::date
+      FROM employees e LEFT JOIN attendance_events a ON a.employee_id=e.id AND (a.captured_at AT TIME ZONE 'Asia/Jakarta')::date=$2::date
       WHERE e.organization_id=$1 AND e.is_active=true ORDER BY e.id,a.captured_at DESC`,[session.org,date])
     return send(res,200,result.rows)
   }

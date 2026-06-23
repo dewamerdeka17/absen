@@ -111,3 +111,153 @@ tbody tr:nth-child(even){background:#fbfdff}
   .metrics-grid{grid-template-columns:1fr}
   .quick-grid{grid-template-columns:1fr}
 }
+
+/* Logged-in IdenTime shell */
+.sidebar{
+  background:linear-gradient(180deg,#071f44 0%,#09294f 56%,#071f44 100%);
+  border-right:0;
+  color:#f8fbff;
+}
+.sidebar .identime-hex-navy,.sidebar .identime-clock,.sidebar .identime-print{stroke:#ffffff}
+.sidebar .identime-hex-teal,.sidebar .identime-hand,.sidebar .identime-tick{stroke:#62f0e8}
+.sidebar .identime-center{fill:#ffffff}
+.sidebar .identime-name span{color:#ffffff}
+.sidebar .identime-name em{color:#62f0e8}
+.workspace{
+  background:#0d315d;
+  border-color:#1b4a78;
+  color:#ffffff;
+}
+.workspace-logo{
+  background:#62f0e8;
+  color:#071f44;
+}
+.workspace small,.user-card small{color:#a9bfd8}
+.workspace strong,.user-card strong{color:#ffffff}
+.nav-group>p{color:#73cbd1}
+.nav-group button{color:#c6d6e8}
+.nav-group button:hover{background:#123a68;color:#ffffff}
+.nav-group button.active{
+  background:#12aeb226;
+  border:1px solid #12aeb24d;
+  color:#ffffff;
+}
+.ai-card{
+  background:#0b315d;
+  border-color:#1d5a81;
+  color:#ffffff;
+}
+.ai-card p{color:#a9bfd8}
+.ai-card button{color:#62f0e8}
+.user-card{border-top-color:#1b4a78}
+.user-card button{color:#a9bfd8}
+
+.dashboard-hero{
+  display:grid;
+  grid-template-columns:minmax(0,1.25fr) minmax(220px,.45fr) auto;
+  align-items:center;
+  gap:16px;
+  margin:-6px 0 17px;
+  padding:18px 20px;
+  border:1px solid #bdebea;
+  border-radius:8px;
+  background:
+    linear-gradient(135deg,#071f44 0%,#0b4866 62%,#0b858c 100%);
+  color:#ffffff;
+  overflow:hidden;
+  position:relative;
+}
+.dashboard-hero:after{
+  content:"";
+  position:absolute;
+  right:18%;
+  top:-70px;
+  width:190px;
+  height:190px;
+  border:24px solid #ffffff10;
+  clip-path:polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0 50%);
+  transform:rotate(18deg);
+}
+.dashboard-hero>*{position:relative;z-index:1}
+.dashboard-hero .badge{background:#ffffff12;color:#d7fffb;border:1px solid #ffffff24}
+.dashboard-hero-copy h2{
+  margin-top:10px;
+  max-width:560px;
+  font:800 22px/1.25 'Manrope',sans-serif;
+  letter-spacing:0;
+}
+.dashboard-hero-copy p{
+  max-width:560px;
+  margin-top:7px;
+  color:#d8e6f4;
+  font-size:11px;
+  line-height:1.55;
+}
+.presence-score-card{
+  min-height:94px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px;
+  border:1px solid #ffffff24;
+  border-radius:8px;
+  background:#ffffff12;
+}
+.presence-score-card .identime-mark{width:44px;height:44px}
+.presence-score-card .identime-hex-navy,.presence-score-card .identime-clock,.presence-score-card .identime-print{stroke:#ffffff}
+.presence-score-card .identime-hex-teal,.presence-score-card .identime-hand,.presence-score-card .identime-tick{stroke:#62f0e8}
+.presence-score-card .identime-center{fill:#ffffff}
+.presence-score-card strong{
+  display:block;
+  font:800 26px/1 'Manrope',sans-serif;
+}
+.presence-score-card span{
+  display:block;
+  margin-top:4px;
+  color:#d8e6f4;
+  font-size:9px;
+}
+.dashboard-hero-actions{
+  display:grid;
+  gap:8px;
+  min-width:142px;
+}
+.dashboard-hero-actions .secondary{
+  border-color:#ffffff2e;
+  background:#ffffff10;
+  color:#ffffff;
+}
+
+@media(min-width:761px) and (max-width:1180px){
+  .dashboard-hero{
+    grid-template-columns:1fr;
+    align-items:start;
+  }
+  .presence-score-card{width:100%;max-width:330px}
+  .dashboard-hero-actions{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    width:100%;
+  }
+}
+
+@media(max-width:760px){
+  .sidebar{box-shadow:10px 0 40px #071f4440}
+  .dashboard-hero{
+    grid-template-columns:1fr;
+    margin:0 0 16px;
+    padding:16px;
+  }
+  .dashboard-hero-copy h2{font-size:19px}
+  .presence-score-card{min-height:78px}
+  .dashboard-hero-actions{grid-template-columns:1fr 1fr}
+}
+
+@media(max-width:520px){
+  .heading-actions .button{
+    width:auto;
+    height:40px;
+    font-size:11px;
+  }
+  .heading-actions .button svg{width:17px}
+  .dashboard-hero-actions{grid-template-columns:1fr}
+}
