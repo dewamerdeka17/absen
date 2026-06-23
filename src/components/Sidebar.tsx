@@ -1,7 +1,7 @@
 import {
   Bell, CalendarDays, Check, ChevronDown, ChevronRight, Fingerprint, FileBarChart,
   LayoutDashboard, LocateFixed, LogOut, Menu, MessageSquareText, Search, Settings,
-  Sparkles, Users, WalletCards, X,
+  Sparkles, UserRound, Users, WalletCards, X,
 } from 'lucide-react'
 import { Avatar } from '../components'
 import type { NavId, Session, Organization } from '../types'
@@ -23,6 +23,13 @@ const navGroups = [
       { id: 'payroll' as NavId, label: 'Penggajian', icon: WalletCards },
       { id: 'reports' as NavId, label: 'Laporan', icon: FileBarChart },
       { id: 'maps' as NavId, label: 'Live Tracking', icon: LocateFixed },
+    ],
+  },
+  {
+    label: 'AKUN',
+    items: [
+      { id: 'profile' as NavId, label: 'Profil', icon: UserRound },
+      { id: 'settings' as NavId, label: 'Pengaturan', icon: Settings },
     ],
   },
 ]
