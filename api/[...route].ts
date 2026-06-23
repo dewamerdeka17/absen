@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import { Pool, type PoolClient } from '@neondatabase/serverless'
 import { compare, hash } from 'bcryptjs'
 import { SignJWT, jwtVerify } from 'jose'
