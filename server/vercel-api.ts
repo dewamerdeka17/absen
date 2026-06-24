@@ -162,6 +162,9 @@ function duplicateEmployeeError(error: unknown) {
   if (constraint.includes('employee_number')) {
     return new ApiError(409, 'EMPLOYEE_NUMBER_EXISTS', 'Nomor karyawan sudah digunakan.')
   }
+  if (constraint.includes('username')) {
+    return new ApiError(409, 'USERNAME_ALREADY_REGISTERED', 'Username sudah digunakan.')
+  }
   if (constraint.includes('users') && constraint.includes('email')) {
     return new ApiError(409, 'EMAIL_ALREADY_REGISTERED', 'Email akun sudah terdaftar.')
   }
@@ -188,6 +191,10 @@ function normalizePhone(value?: string | null) {
 
 function looksLikePhone(value: string) {
   return /^[+\d][\d\s().-]{7,}$/.test(value.trim())
+}
+
+function localPhoneDigits(normalizedDigits: string) {
+  return normalizedDigits.startsWith('62') ? `0${normalizedDigits.slice(2)}` : ''
 }
 
 function secret() {
@@ -274,7 +281,7 @@ const setupSchema = z.object({ organizationName: z.string().min(2), fullName: z.
 const passwordChangeSchema = z.object({ currentPassword: z.string().min(8), newPassword: z.string().min(8) })
 const employeeSchema = z.object({
   fullName: z.string().min(2), email: z.string().email().optional().or(z.literal('')), phone: z.string().optional(),
-  employeeNumber: z.string().min(1), department: z.string().min(1), jobTitle: z.string().min(1),
+  employeeNumber: z.string().min(1), username: z.string().trim().optional(), department: z.string().min(1), jobTitle: z.string().min(1),
   employmentType: z.enum(['full_time','part_time','contract','intern']).default('full_time'),
   joinedOn: z.string(), basicSalary: z.coerce.number().nonnegative(), overtimeHourlyRate: z.coerce.number().nonnegative().default(0),
   temporaryPassword: z.string().min(8).optional(),
@@ -384,17 +391,28 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     const identifier = (input.identifier || input.email || '').trim()
     const normalizedPhone = looksLikePhone(identifier) ? normalizePhone(identifier) : ''
     const normalizedPhoneDigits = normalizedPhone.replace(/[^\d]/g, '')
-    const direct = await pool!.query(`SELECT u.id,u.organization_id,u.email,u.password_hash,u.full_name,u.role,u.employee_id,u.status,u.must_change_password
-      FROM users u
-      LEFT JOIN employees e ON e.id=u.employee_id
-      WHERE lower(u.email)=lower($1)
-        OR lower(coalesce(u.username,''))=lower($1)
-        OR lower(e.employee_number)=lower($1)
-        OR ($2<>'' AND e.phone=$2)
-        OR ($3<>'' AND regexp_replace(coalesce(e.phone,''),'[^0-9]','','g')=$3)
-      ORDER BY u.last_login_at DESC NULLS LAST,u.created_at DESC
-      LIMIT 1`,[identifier,normalizedPhone,normalizedPhoneDigits])
-    let user = direct.rows[0]
+    const localDigits = localPhoneDigits(normalizedPhoneDigits)
+    const findUser = async (where: string, params: unknown[]) => {
+      const result = await pool!.query(`SELECT u.id,u.organization_id,u.email,u.password_hash,u.full_name,u.role,u.employee_id,u.status,u.must_change_password
+        FROM users u
+        LEFT JOIN employees e ON e.id=u.employee_id
+        WHERE ${where}
+        ORDER BY u.last_login_at DESC NULLS LAST,u.created_at DESC
+        LIMIT 1`,params)
+      return result.rows[0]
+    }
+    let user = await findUser('lower(u.email)=lower($1)',[identifier])
+    if (!user && normalizedPhone) {
+      user = await findUser(`e.phone=$1
+        OR regexp_replace(coalesce(e.phone,''),'[^0-9]','','g')=$2
+        OR ($3<>'' AND regexp_replace(coalesce(e.phone,''),'[^0-9]','','g')=$3)`,[normalizedPhone,normalizedPhoneDigits,localDigits])
+    }
+    if (!user) {
+      user = await findUser("lower(coalesce(u.username,''))=lower($1)",[identifier])
+    }
+    if (!user) {
+      user = await findUser('lower(e.employee_number)=lower($1)',[identifier])
+    }
     if (!user) {
       const byName = await pool!.query(`SELECT u.id,u.organization_id,u.email,u.password_hash,u.full_name,u.role,u.employee_id,u.status,u.must_change_password
         FROM users u
@@ -402,7 +420,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         WHERE lower(u.full_name)=lower($1) OR lower(e.full_name)=lower($1)
         ORDER BY u.last_login_at DESC NULLS LAST,u.created_at DESC
         LIMIT 2`,[identifier])
-      if (byName.rowCount && byName.rowCount > 1) throw new ApiError(409,'NON_UNIQUE_NAME','Nama tidak unik. Silakan login menggunakan email atau nomor HP.')
+      if (byName.rowCount && byName.rowCount > 1) throw new ApiError(409,'NON_UNIQUE_NAME','Nama ini digunakan oleh lebih dari satu akun. Gunakan email, nomor HP, atau username Anda.')
       user = byName.rows[0]
     }
     if (!user || user.status !== 'active' || !(await compare(input.password,user.password_hash))) throw new ApiError(401,'INVALID_CREDENTIALS','Username/email/nomor HP atau kata sandi salah.')
@@ -451,7 +469,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (path === '/employees' && method === 'GET') {
     const session=await sessionFor(req)
-    const result=await pool!.query(`SELECT e.*,u.role AS account_role,u.must_change_password
+    const result=await pool!.query(`SELECT e.*,u.role AS account_role,u.must_change_password,u.username AS account_username
       FROM employees e
       LEFT JOIN users u ON u.employee_id=e.id AND u.organization_id=e.organization_id
       WHERE e.organization_id=$1 AND e.is_active=true
@@ -465,6 +483,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
       const email = input.email?.trim().toLowerCase() || null
       const phone = normalizePhone(input.phone)
       const accountRole = input.accountRole || 'employee'
+      const accountUsername = input.username?.trim() || input.employeeNumber.trim()
       await client.query(`INSERT INTO employees (id,organization_id,employee_number,full_name,email,phone,department,job_title,employment_type,joined_on,basic_salary,overtime_hourly_rate)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,[id,session.org,input.employeeNumber.trim(),input.fullName.trim(),email,phone||null,input.department.trim(),input.jobTitle.trim(),input.employmentType,input.joinedOn,input.basicSalary,input.overtimeHourlyRate])
       if(email){
@@ -472,9 +491,9 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         if(existing.rowCount){
           const linkedEmployeeId = existing.rows[0].employee_id
           if(linkedEmployeeId&&linkedEmployeeId!==id)throw new ApiError(409,'EMAIL_ALREADY_LINKED','Email ini sudah terhubung dengan karyawan lain.')
-          await client.query('UPDATE users SET employee_id=$1,username=$2,full_name=$3,role=$4 WHERE id=$5',[id,input.employeeNumber.trim(),input.fullName.trim(),accountRole,existing.rows[0].id])
+          await client.query('UPDATE users SET employee_id=$1,username=$2,full_name=$3,role=$4 WHERE id=$5',[id,accountUsername,input.fullName.trim(),accountRole,existing.rows[0].id])
         }else if(input.temporaryPassword){
-          await client.query('INSERT INTO users (id,organization_id,email,username,password_hash,full_name,role,employee_id,must_change_password) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',[randomUUID(),session.org,email,input.employeeNumber.trim(),await hash(input.temporaryPassword,12),input.fullName.trim(),accountRole,id,true])
+          await client.query('INSERT INTO users (id,organization_id,email,username,password_hash,full_name,role,employee_id,must_change_password) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',[randomUUID(),session.org,email,accountUsername,await hash(input.temporaryPassword,12),input.fullName.trim(),accountRole,id,true])
         }else{
           throw new ApiError(400,'TEMPORARY_PASSWORD_REQUIRED','Password sementara wajib diisi jika email akun karyawan diisi.')
         }
@@ -520,7 +539,8 @@ async function handler(req: VercelRequest, res: VercelResponse) {
       const temporaryPassword=input.temporaryPassword?.trim()
       const accountRole=input.accountRole || undefined
       const employeeNumber=has('employeeNumber')?input.employeeNumber!.trim():current.employee_number
-      const linked=(await client.query('SELECT id,email,role FROM users WHERE organization_id=$1 AND employee_id=$2 FOR UPDATE',[session.org,employeeId])).rows[0]
+      const linked=(await client.query('SELECT id,email,role,username FROM users WHERE organization_id=$1 AND employee_id=$2 FOR UPDATE',[session.org,employeeId])).rows[0]
+      const accountUsername=has('username') ? (input.username?.trim() || employeeNumber) : (linked?.username || employeeNumber)
       if(email){
         const emailUser=(await client.query('SELECT id,employee_id FROM users WHERE organization_id=$1 AND lower(email)=lower($2) FOR UPDATE',[session.org,email])).rows[0]
         if(emailUser?.employee_id&&emailUser.employee_id!==employeeId)throw new ApiError(409,'EMAIL_ALREADY_LINKED','Email ini sudah terhubung dengan karyawan lain.')
@@ -528,19 +548,19 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         const account=linked||emailUser
         if(account){
           if(temporaryPassword){
-            await client.query('UPDATE users SET email=$1,username=$2,full_name=$3,employee_id=$4,password_hash=$5,status=$6,must_change_password=true,role=coalesce($7,role) WHERE id=$8',[email,employeeNumber,fullName,employeeId,await hash(temporaryPassword,12),'active',accountRole,account.id])
+            await client.query('UPDATE users SET email=$1,username=$2,full_name=$3,employee_id=$4,password_hash=$5,status=$6,must_change_password=true,role=coalesce($7,role) WHERE id=$8',[email,accountUsername,fullName,employeeId,await hash(temporaryPassword,12),'active',accountRole,account.id])
           }else{
-            await client.query('UPDATE users SET email=$1,username=$2,full_name=$3,employee_id=$4,status=$5,role=coalesce($6,role) WHERE id=$7',[email,employeeNumber,fullName,employeeId,'active',accountRole,account.id])
+            await client.query('UPDATE users SET email=$1,username=$2,full_name=$3,employee_id=$4,status=$5,role=coalesce($6,role) WHERE id=$7',[email,accountUsername,fullName,employeeId,'active',accountRole,account.id])
           }
         }else{
           if(!temporaryPassword)throw new ApiError(400,'TEMPORARY_PASSWORD_REQUIRED','Password sementara wajib diisi untuk membuat akun karyawan.')
-          await client.query('INSERT INTO users (id,organization_id,email,username,password_hash,full_name,role,employee_id,must_change_password) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',[randomUUID(),session.org,email,employeeNumber,await hash(temporaryPassword,12),fullName,accountRole||'employee',employeeId,true])
+          await client.query('INSERT INTO users (id,organization_id,email,username,password_hash,full_name,role,employee_id,must_change_password) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',[randomUUID(),session.org,email,accountUsername,await hash(temporaryPassword,12),fullName,accountRole||'employee',employeeId,true])
         }
       }else if(temporaryPassword){
         if(!linked)throw new ApiError(400,'EMPLOYEE_ACCOUNT_REQUIRED','Isi email akun untuk membuat atau mengubah password akun karyawan.')
-        await client.query('UPDATE users SET password_hash=$1,full_name=$2,username=$3,must_change_password=true,role=coalesce($4,role) WHERE id=$5',[await hash(temporaryPassword,12),fullName,employeeNumber,accountRole,linked.id])
-      }else if(linked&&(has('fullName')||has('employeeNumber'))){
-        await client.query('UPDATE users SET full_name=$1,username=$2,role=coalesce($3,role) WHERE id=$4',[fullName,employeeNumber,accountRole,linked.id])
+        await client.query('UPDATE users SET password_hash=$1,full_name=$2,username=$3,must_change_password=true,role=coalesce($4,role) WHERE id=$5',[await hash(temporaryPassword,12),fullName,accountUsername,accountRole,linked.id])
+      }else if(linked&&(has('fullName')||has('employeeNumber')||has('username'))){
+        await client.query('UPDATE users SET full_name=$1,username=$2,role=coalesce($3,role) WHERE id=$4',[fullName,accountUsername,accountRole,linked.id])
       }else if(linked&&accountRole){
         await client.query('UPDATE users SET role=$1 WHERE id=$2',[accountRole,linked.id])
       }

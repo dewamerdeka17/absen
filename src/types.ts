@@ -40,6 +40,7 @@ export type Employee = {
   overtime_hourly_rate: string
   document_status: Record<string, boolean>
   account_role?: Session['role']
+  account_username?: string
   must_change_password?: boolean
 }
 

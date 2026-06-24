@@ -86,7 +86,8 @@ async function mockAuthenticatedApp(page, overrides: { employees?: unknown[]; lo
 }
 
 test('status endpoint is backed by Postgres', async ({ request }) => {
-  const response = await request.get('/api/status')
+  const apiBase = process.env.PLAYWRIGHT_API_BASE_URL?.replace(/\/$/, '')
+  const response = await request.get(apiBase ? `${apiBase}/api/status` : '/api/status')
   expect(response.ok()).toBe(true)
 
   const payload = await response.json()
@@ -117,11 +118,13 @@ test('auth screen renders without a visible runtime error', async ({ page }) => 
   await expect(page.getByLabel(/Ingat aku/)).toBeVisible()
   await expect(page.getByRole('button', { name: /Google/i })).toHaveCount(0)
   await expect(page.getByText(/Server aplikasi|URL Vercel|Alamat API Vercel/i)).toHaveCount(0)
+  await expect(page.getByText('Kamera dan lokasi hanya digunakan saat Anda menjalankan absensi.')).toHaveCount(0)
   await expect(page.getByText(/Cannot read properties/i)).toHaveCount(0)
   expect(pageErrors).toEqual([])
 })
 
-test('login accepts an identifier from employee number, phone, email, or unique name field', async ({ page }) => {
+for (const identifier of ['budi@example.com', '08123456789', '628123456789', '+628123456789', 'dewa', 'EMP-001']) {
+test(`login accepts identifier "${identifier}"`, async ({ page }) => {
   let payload: Record<string, unknown> | null = null
   await page.route('**/api/status', route => route.fulfill({
     status: 200,
@@ -148,12 +151,42 @@ test('login accepts an identifier from employee number, phone, email, or unique 
   }))
 
   await page.goto('/')
-  await page.getByLabel('Email / HP / nama / username').fill('+628123456789')
+  await page.getByLabel('Email / HP / nama / username').fill(identifier)
   await page.getByLabel('Kata sandi').fill('TempPass!234')
   await page.getByRole('button', { name: /Masuk ke IdenTime/ }).click()
 
   await expect(page.getByRole('heading', { name: 'Ringkasan hari ini' })).toBeVisible()
-  expect(payload).toMatchObject({ identifier: '+628123456789', password: 'TempPass!234' })
+  expect(payload).toMatchObject({ identifier, password: 'TempPass!234' })
+})
+}
+
+test('login duplicate-name error is clear and disappears when the user edits input', async ({ page }) => {
+  await page.route('**/api/status', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ data: { configured: true, database: 'connected' }, error: null }),
+  }))
+  await page.route('**/api/auth/login', route => route.fulfill({
+    status: 409,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      data: null,
+      error: {
+        code: 'NON_UNIQUE_NAME',
+        message: 'Nama ini digunakan oleh lebih dari satu akun. Gunakan email, nomor HP, atau username Anda.',
+      },
+    }),
+  }))
+
+  await page.goto('/')
+  await page.getByLabel('Email / HP / nama / username').fill('Dewa')
+  await page.getByLabel('Kata sandi').fill('TempPass!234')
+  await page.getByRole('button', { name: /Masuk ke IdenTime/ }).click()
+
+  const error = page.getByText('Nama ini digunakan oleh lebih dari satu akun. Gunakan email, nomor HP, atau username Anda.')
+  await expect(error).toBeVisible()
+  await page.getByLabel('Email / HP / nama / username').fill('dewa')
+  await expect(error).toHaveCount(0)
 })
 
 test('admin can submit the add employee form with normalized data', async ({ page, isMobile }) => {
@@ -182,6 +215,7 @@ test('admin can submit the add employee form with normalized data', async ({ pag
   await page.getByRole('main').getByRole('button', { name: 'Tambah pertama' }).click()
   await page.getByLabel('Nama lengkap').fill('  Admin Test  ')
   await page.getByLabel('Nomor karyawan').fill(' EMP-001 ')
+  await page.getByLabel('Username').fill('dewa')
   await expect(page.getByLabel('Password sementara')).toBeEnabled()
   await page.getByLabel('Password sementara').fill('TempPass!234')
   await page.getByLabel('Email akun').fill(' ADMIN@EXAMPLE.COM ')
@@ -196,6 +230,7 @@ test('admin can submit the add employee form with normalized data', async ({ pag
   expect(payload).toMatchObject({
     fullName: 'Admin Test',
     employeeNumber: 'EMP-001',
+    username: 'dewa',
     email: 'admin@example.com',
     temporaryPassword: 'TempPass!234',
     accountRole: 'hrd',
@@ -226,6 +261,7 @@ test('admin can edit an employee account and reset the password', async ({ page,
   await page.goto('/')
   await page.getByRole('button', { name: /Karyawan/ }).click()
   await page.getByRole('button', { name: /Edit Budi Santoso/ }).click()
+  await page.getByLabel('Username').fill('budi')
   await page.getByLabel('Email akun').fill(' budi.baru@example.com ')
   await page.getByLabel('Password baru').fill('NewTemp!234')
   await page.getByRole('button', { name: /Simpan/ }).click()
@@ -234,6 +270,7 @@ test('admin can edit an employee account and reset the password', async ({ page,
   expect(payload).toMatchObject({
     fullName: 'Budi Santoso',
     employeeNumber: 'EMP-001',
+    username: 'budi',
     email: 'budi.baru@example.com',
     temporaryPassword: 'NewTemp!234',
   })

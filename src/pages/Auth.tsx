@@ -18,6 +18,10 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: Sessio
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [form, setForm] = useState({ organizationName: '', fullName: '', email: '', password: '' })
+  const updateForm = (patch: Partial<typeof form>) => {
+    if (error) setError('')
+    setForm(value => ({ ...value, ...patch }))
+  }
 
   const check = useCallback(async () => {
     setError('')
@@ -77,11 +81,11 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: Sessio
           </div>
           <form onSubmit={submit}>
             {configured === false && <>
-              <label>Nama organisasi<div className="field"><Building2 size={17} /><input required value={form.organizationName} onChange={e => setForm({ ...form, organizationName: e.target.value })} placeholder="Contoh: Nusantara Digital" /></div></label>
-              <label>Nama owner<div className="field"><UserRound size={17} /><input required value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} placeholder="Nama lengkap" /></div></label>
+              <label>Nama organisasi<div className="field"><Building2 size={17} /><input required value={form.organizationName} onChange={e => updateForm({ organizationName: e.target.value })} placeholder="Contoh: Nusantara Digital" /></div></label>
+              <label>Nama owner<div className="field"><UserRound size={17} /><input required value={form.fullName} onChange={e => updateForm({ fullName: e.target.value })} placeholder="Nama lengkap" /></div></label>
             </>}
-            <label>{configured === false ? 'Email owner' : 'Email / HP / nama / username'}<div className="field"><Mail size={17} /><input type={configured === false ? 'email' : 'text'} required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder={configured === false ? 'owner@perusahaan.com' : 'email, +628..., nama unik, atau EMP-001'} /></div></label>
-            <label>Kata sandi<div className="field"><LockKeyhole size={17} /><input type={showPassword ? 'text' : 'password'} minLength={8} required value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Minimal 8 karakter" /><button type="button" onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>
+            <label>{configured === false ? 'Email owner' : 'Email / HP / nama / username'}<div className="field"><Mail size={17} /><input type={configured === false ? 'email' : 'text'} required value={form.email} onChange={e => updateForm({ email: e.target.value })} placeholder={configured === false ? 'owner@perusahaan.com' : 'email, +628..., nama unik, atau EMP-001'} /></div></label>
+            <label>Kata sandi<div className="field"><LockKeyhole size={17} /><input type={showPassword ? 'text' : 'password'} minLength={8} required value={form.password} onChange={e => updateForm({ password: e.target.value })} placeholder="Minimal 8 karakter" /><button type="button" onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>
             <label className="remember-check">
               <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} />
               <span><strong>Ingat aku</strong><small>Tetap masuk di perangkat ini.</small></span>
@@ -91,7 +95,6 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: Sessio
               {busy ? <><LoaderCircle className="spin" /> Memproses...</> : <>{configured === false ? 'Buat ruang kerja' : 'Masuk ke IdenTime'} <ChevronRight size={17} /></>}
             </button>
           </form>
-          <p className="login-terms">Kamera dan lokasi hanya digunakan saat Anda menjalankan absensi.</p>
         </div>
       </section>
     </div>

@@ -35,6 +35,7 @@ function EmployeeForm({ employee, onClose, onSaved }: { employee?: Employee; onC
       const payload = {
         fullName: text('fullName'),
         employeeNumber: text('employeeNumber'),
+        username: text('username') || undefined,
         email: accountEmail || (editing ? '' : undefined),
         temporaryPassword: accountEmail && password.trim() ? password.trim() : undefined,
         accountRole: text('accountRole') || 'employee',
@@ -62,6 +63,7 @@ function EmployeeForm({ employee, onClose, onSaved }: { employee?: Employee; onC
         <div className="form-grid">
           <label>Nama lengkap<input name="fullName" required defaultValue={employee?.full_name || ''} /></label>
           <label>Nomor karyawan<input name="employeeNumber" required placeholder="EMP-001" defaultValue={employee?.employee_number || ''} /></label>
+          <label>Username<input name="username" placeholder="dewa" defaultValue={employee?.account_username || ''} /></label>
           <label>Email akun<input name="email" type="email" autoComplete="email" placeholder="Opsional" value={email} onChange={e => setEmail(normalizeEmail(e.target.value))} /></label>
           <label>{editing ? 'Password baru' : 'Password sementara'}<input name="temporaryPassword" value={password} onChange={e => setPassword(e.target.value)} minLength={8} required={!editing && Boolean(email.trim())} placeholder={editing ? 'Kosongkan jika tidak diubah' : 'Minimal 8 karakter'} /></label>
           <label>Role akun
@@ -141,7 +143,7 @@ export function EmployeesPage({ notify }: { notify: (text: string, error?: boole
                   <tbody>
                     {data.map(e => (
                       <tr key={e.id}>
-                        <td><div className="person"><Avatar small initials={initials(e.full_name)} /><span><strong>{e.full_name}</strong><small>{e.email || e.job_title}</small></span></div></td>
+                        <td><div className="person"><Avatar small initials={initials(e.full_name)} /><span><strong>{e.full_name}</strong><small>{e.account_username ? `@${e.account_username}` : e.email || e.job_title}</small></span></div></td>
                         <td>{e.department}</td>
                         <td><Badge tone={e.must_change_password ? 'orange' : 'blue'}>{e.account_role || 'employee'}</Badge></td>
                         <td>{e.employment_type.replace('_', ' ')}</td>
