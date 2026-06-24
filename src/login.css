@@ -151,53 +151,6 @@
   font-size: 12px;
 }
 
-.oauth-buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-top: 27px;
-}
-
-.oauth-buttons button {
-  height: 42px;
-  border: 1px solid #dfe4ec;
-  border-radius: 9px;
-  background: #fff;
-  color: #3b475d;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.oauth-buttons button:hover {
-  background: #f8faff;
-  border-color: #c8d3e7;
-}
-
-.google-g {
-  color: #4285f4;
-  font-size: 16px;
-  font-weight: 800;
-}
-
-.or-divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 20px 0;
-  color: #9aa2b1;
-  font-size: 9px;
-}
-
-.or-divider span {
-  height: 1px;
-  background: #e6e9ef;
-  flex: 1;
-}
-
 .login-box form > label {
   display: block;
   margin-top: 14px;
@@ -526,20 +479,6 @@
   letter-spacing: 0;
 }
 
-.oauth-buttons {
-  grid-template-columns: 1fr;
-  margin-top: 24px;
-}
-
-.oauth-buttons button {
-  border-radius: 8px;
-}
-
-.oauth-buttons button:hover {
-  background: #f2fbfb;
-  border-color: #b9e9e8;
-}
-
 .field {
   border-radius: 8px;
 }
@@ -678,10 +617,6 @@
     padding: 22px 16px;
     box-shadow: 0 10px 30px #0a2f6310;
   }
-
-  .oauth-buttons {
-    margin-top: 20px;
-  }
 }
 
 [data-theme="dark"] .login-page,
@@ -717,8 +652,7 @@
   color: #9fb0c7;
 }
 
-[data-theme="dark"] .field,
-[data-theme="dark"] .oauth-buttons button {
+[data-theme="dark"] .field {
   background: #0f1d31;
   border-color: #263954;
   color: #dbe7f5;
@@ -730,12 +664,4 @@
 
 [data-theme="dark"] .field input::placeholder {
   color: #91a2b8;
-}
-
-[data-theme="dark"] .or-divider {
-  color: #8294ad;
-}
-
-[data-theme="dark"] .or-divider span {
-  background: #263954;
 }

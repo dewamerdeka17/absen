@@ -10,6 +10,8 @@ import type { AttendanceRow, Employee, Session } from '../types'
 import { initials, time, today } from '../utils/format'
 import { hashImage, locate } from '../utils/device'
 
+const canSelectEmployee = (role: Session['role']) => ['owner', 'admin', 'hrd', 'manager'].includes(role)
+
 export function CaptureModal({ employees, user, onClose, onDone }: { employees: Employee[]; user: Session; onClose: () => void; onDone: () => void }) {
   const video = useRef<HTMLVideoElement>(null), stream = useRef<MediaStream | null>(null)
   const [employeeId, setEmployeeId] = useState(user.employeeId || employees[0]?.id || '')
@@ -44,7 +46,7 @@ export function CaptureModal({ employees, user, onClose, onDone }: { employees: 
     setBusy(true); setError('')
     try {
       const position = await locate()
-      await post('/attendance/check', { eventType, employeeId, ...position, faceProofHash: await hashImage(photo), deviceInfo: `${Capacitor.getPlatform()} • ${navigator.userAgent.slice(0, 120)}` })
+      await post('/attendance/check', { eventType, employeeId, ...position, faceProofHash: await hashImage(photo), deviceTimestamp: new Date().toISOString(), deviceInfo: `${Capacitor.getPlatform()} • ${navigator.userAgent.slice(0, 120)}` })
       onDone()
     } catch (e) { setError(e instanceof Error ? e.message : 'Absensi gagal.') } finally { setBusy(false) }
   }
@@ -52,7 +54,7 @@ export function CaptureModal({ employees, user, onClose, onDone }: { employees: 
   return (
     <Modal title="Absensi kamera & lokasi" icon={<CameraIcon />} onClose={onClose}>
       <div className="capture-controls">
-        {user.role === 'admin' && <label>Karyawan<select value={employeeId} onChange={e => setEmployeeId(e.target.value)}><option value="">Pilih karyawan</option>{employees.map(e => <option value={e.id} key={e.id}>{e.full_name}</option>)}</select></label>}
+        {canSelectEmployee(user.role) && <label>Karyawan<select value={employeeId} onChange={e => setEmployeeId(e.target.value)}><option value="">Pilih karyawan</option>{employees.map(e => <option value={e.id} key={e.id}>{e.full_name}</option>)}</select></label>}
         <div className="segmented">
           <button className={eventType === 'check_in' ? 'active' : ''} onClick={() => setEventType('check_in')}>Check-in</button>
           <button className={eventType === 'check_out' ? 'active' : ''} onClick={() => setEventType('check_out')}>Check-out</button>
@@ -81,12 +83,13 @@ export function AttendancePage({ openScan, refreshKey }: { openScan: () => void;
         <section className="card">
           {!data?.length ? <div className="empty-state"><span><Fingerprint /></span><h3>Belum ada karyawan</h3><p>Tambahkan karyawan sebelum menggunakan absensi.</p></div> : (
             <div className="table-scroll"><table>
-              <thead><tr><th>KARYAWAN</th><th>DIVISI</th><th>WAKTU TERAKHIR</th><th>AKTIVITAS</th><th>STATUS</th></tr></thead>
+              <thead><tr><th>KARYAWAN</th><th>DIVISI</th><th>WAKTU TERAKHIR</th><th>AKTIVITAS</th><th>LOKASI</th><th>STATUS</th></tr></thead>
               <tbody>{data.map(e => (
                 <tr key={e.employee_id}>
                   <td><div className="person"><Avatar small initials={initials(e.full_name)} /><span><strong>{e.full_name}</strong><small>{e.job_title}</small></span></div></td>
                   <td>{e.department}</td><td>{time(e.captured_at)} {e.captured_at && 'WIB'}</td>
                   <td>{e.event_type ? e.event_type.replace('_', '-') : 'Belum hadir'}</td>
+                  <td>{e.work_location_name || '—'}{e.distance_meters ? ` • ${Math.round(Number(e.distance_meters))} m` : ''}</td>
                   <td><Badge tone={!e.status ? 'blue' : e.status === 'late' ? 'orange' : 'green'}>{!e.status ? 'Belum hadir' : e.status === 'late' ? 'Terlambat' : 'Hadir'}</Badge></td>
                 </tr>
               ))}</tbody>

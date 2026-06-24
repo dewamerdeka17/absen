@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ChevronRight, LoaderCircle, LocateFixed, RefreshCw, UserRound } from 'lucide-react'
-import { Avatar, Card } from '../components'
+import { Avatar, Badge, Card } from '../components'
 import { Busy, ErrorBox, PageHeading } from '../components/ui'
 import { useLoad } from '../hooks/useLoad'
 import { api, post } from '../api'
@@ -8,11 +8,15 @@ import type { Session } from '../types'
 import { initials, time } from '../utils/format'
 import { locate } from '../utils/device'
 
-type LocationEntry = { employee_id: string; full_name: string; job_title: string; latitude: string; longitude: string; accuracy_meters: string; recorded_at: string }
+type LocationEntry = { employee_id: string; full_name: string; job_title: string; latitude: string; longitude: string; accuracy_meters: string; recorded_at: string; tracking_status: 'online' | 'stale' | 'offline' }
 
 export function MapsPage({ user, notify }: { user: Session; notify: (text: string, error?: boolean) => void }) {
   const { data, loading, error, reload } = useLoad(() => api<LocationEntry[]>('/locations'), [user.role])
   const [sending, setSending] = useState(false)
+  useEffect(() => {
+    const timer = window.setInterval(() => void reload(), 45000)
+    return () => window.clearInterval(timer)
+  }, [reload])
   const send = async () => {
     setSending(true)
     try { const position = await locate(); await post('/locations', position); notify('Lokasi kerja berhasil diperbarui.'); await reload() }
@@ -21,10 +25,10 @@ export function MapsPage({ user, notify }: { user: Session; notify: (text: strin
   }
   return (
     <>
-      <PageHeading title="Live tracking" subtitle="Lokasi hanya direkam saat pengguna mengirim pembaruan dari perangkatnya."
+      <PageHeading title="Live tracking" subtitle="Menampilkan karyawan yang masih check-in. Data diperbarui otomatis setiap 45 detik."
         action={<>
           <button className="button primary" onClick={send} disabled={sending}>{sending ? <LoaderCircle className="spin" /> : <LocateFixed size={17} />} Kirim lokasi saya</button>
-          {user.role === 'admin' && <button className="button secondary" onClick={reload}><RefreshCw size={16} /> Perbarui</button>}
+          <button className="button secondary" onClick={reload}><RefreshCw size={16} /> Perbarui</button>
         </>} />
       {loading ? <Busy /> : error ? <ErrorBox message={error} retry={reload} /> : (
         <div className="map-layout">
@@ -33,7 +37,7 @@ export function MapsPage({ user, notify }: { user: Session; notify: (text: strin
             {!data?.length && <div className="map-empty"><LocateFixed /><strong>Belum ada lokasi aktif</strong><span>Klik Kirim lokasi saya lalu izinkan akses lokasi dari browser.</span></div>}
           </div></Card>
           <Card className="online-list"><div className="card-heading"><div><h2>Lokasi terbaru</h2><p>{user.role === 'admin' ? 'Dalam 7 hari terakhir' : 'Lokasi terakhir akun Anda'}</p></div>{data?.length ? <span className="live"><i />LIVE</span> : null}</div>
-            {data?.map(person => <a className="online-person person-link" href={`https://www.openstreetmap.org/?mlat=${person.latitude}&mlon=${person.longitude}`} target="_blank" rel="noreferrer" key={person.employee_id}><Avatar initials={initials(person.full_name)} /><div><strong>{person.full_name}</strong><small>{person.job_title} • {time(person.recorded_at)} WIB</small></div><ChevronRight size={17} /></a>)}
+            {data?.map(person => <a className="online-person person-link" href={`https://www.openstreetmap.org/?mlat=${person.latitude}&mlon=${person.longitude}`} target="_blank" rel="noreferrer" key={person.employee_id}><Avatar initials={initials(person.full_name)} /><div><strong>{person.full_name}</strong><small>{person.job_title} • {time(person.recorded_at)} WIB • akurasi {Math.round(Number(person.accuracy_meters || 0))} m</small></div><Badge tone={person.tracking_status === 'online' ? 'green' : person.tracking_status === 'stale' ? 'orange' : 'blue'}>{person.tracking_status}</Badge><ChevronRight size={17} /></a>)}
           </Card>
         </div>
       )}

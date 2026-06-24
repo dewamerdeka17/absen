@@ -35,6 +35,20 @@ const navGroups = [
   },
 ]
 
+const roleLabel: Record<Session['role'], string> = {
+  owner: 'Owner',
+  admin: 'Administrator',
+  hrd: 'HRD',
+  manager: 'Manager',
+  employee: 'Karyawan',
+}
+
+const canOpen = (role: Session['role'], id: NavId) => {
+  if (['employees', 'payroll', 'reports'].includes(id)) return ['owner', 'admin', 'hrd'].includes(role)
+  if (id === 'roster') return ['owner', 'admin', 'hrd', 'manager'].includes(role)
+  return true
+}
+
 export const pageTitles: Record<NavId, string> = {
   dashboard: 'Ringkasan', attendance: 'Absensi', employees: 'Karyawan',
   roster: 'Jadwal & Shift', payroll: 'Penggajian', reports: 'Laporan',
@@ -64,7 +78,7 @@ export function Sidebar({ active, setActive, open, close, user, org, onLogout }:
             <div className="nav-group" key={group.label}>
               <p>{group.label}</p>
               {group.items
-                .filter(item => user.role === 'admin' || !['employees', 'payroll', 'reports'].includes(item.id))
+                .filter(item => canOpen(user.role, item.id))
                 .map(item => {
                   const Icon = item.icon
                   return (
@@ -84,7 +98,7 @@ export function Sidebar({ active, setActive, open, close, user, org, onLogout }:
         </div>
         <div className="user-card">
           <Avatar initials={initials(user.name)} color="#dbeafe" />
-          <span><strong>{user.name}</strong><small>{user.role === 'admin' ? 'Administrator' : 'Karyawan'}</small></span>
+          <span><strong>{user.name}</strong><small>{roleLabel[user.role]}</small></span>
           <button onClick={onLogout}><LogOut size={17} /></button>
         </div>
       </aside>

@@ -9,6 +9,10 @@ import { dateText, initials, rupiah, today } from '../utils/format'
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase()
 const temporaryPassword = () => `Hr!${crypto.randomUUID().slice(0, 8)}9`
+const parseMoney = (value: unknown) => {
+  const digits = String(value ?? '').replace(/[^\d]/g, '')
+  return digits ? Number(digits) : 0
+}
 
 function EmployeeForm({ employee, onClose, onSaved }: { employee?: Employee; onClose: () => void; onSaved: () => void }) {
   const editing = Boolean(employee)
@@ -17,6 +21,8 @@ function EmployeeForm({ employee, onClose, onSaved }: { employee?: Employee; onC
   const [error, setError] = useState('')
   const [email, setEmail] = useState(() => normalizeEmail(employee?.email || ''))
   const [password, setPassword] = useState(editing ? '' : generatedPassword)
+  const [basicSalary, setBasicSalary] = useState(() => rupiah(employee?.basic_salary || 0))
+  const [overtimeRate, setOvertimeRate] = useState(() => rupiah(employee?.overtime_hourly_rate || 0))
 
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -25,23 +31,20 @@ function EmployeeForm({ employee, onClose, onSaved }: { employee?: Employee; onC
     const values = Object.fromEntries(new FormData(e.currentTarget))
     const text = (key: string) => String(values[key] ?? '').trim()
     const accountEmail = normalizeEmail(email)
-    const money = (key: string) => {
-      const value = Number.parseFloat(String(values[key] ?? '0'))
-      return Number.isFinite(value) ? value : 0
-    }
     try {
       const payload = {
         fullName: text('fullName'),
         employeeNumber: text('employeeNumber'),
         email: accountEmail || (editing ? '' : undefined),
         temporaryPassword: accountEmail && password.trim() ? password.trim() : undefined,
+        accountRole: text('accountRole') || 'employee',
         phone: text('phone') || undefined,
         department: text('department'),
         jobTitle: text('jobTitle'),
         employmentType: text('employmentType') || 'full_time',
         joinedOn: text('joinedOn'),
-        basicSalary: money('basicSalary'),
-        overtimeHourlyRate: money('overtimeHourlyRate'),
+        basicSalary: parseMoney(values.basicSalary),
+        overtimeHourlyRate: parseMoney(values.overtimeHourlyRate),
       }
       if (editing) await patch(`/employees/${employee!.id}`, payload)
       else await post('/employees', payload)
@@ -60,7 +63,15 @@ function EmployeeForm({ employee, onClose, onSaved }: { employee?: Employee; onC
           <label>Nama lengkap<input name="fullName" required defaultValue={employee?.full_name || ''} /></label>
           <label>Nomor karyawan<input name="employeeNumber" required placeholder="EMP-001" defaultValue={employee?.employee_number || ''} /></label>
           <label>Email akun<input name="email" type="email" autoComplete="email" placeholder="Opsional" value={email} onChange={e => setEmail(normalizeEmail(e.target.value))} /></label>
-          <label>{editing ? 'Password baru' : 'Password sementara'}<input name="temporaryPassword" value={password} onChange={e => setPassword(e.target.value)} minLength={8} disabled={!email.trim()} required={!editing && Boolean(email.trim())} placeholder={editing ? 'Kosongkan jika tidak diubah' : 'Minimal 8 karakter'} /></label>
+          <label>{editing ? 'Password baru' : 'Password sementara'}<input name="temporaryPassword" value={password} onChange={e => setPassword(e.target.value)} minLength={8} required={!editing && Boolean(email.trim())} placeholder={editing ? 'Kosongkan jika tidak diubah' : 'Minimal 8 karakter'} /></label>
+          <label>Role akun
+            <select name="accountRole" defaultValue={employee?.account_role || 'employee'}>
+              <option value="employee">Karyawan</option>
+              <option value="manager">Manager</option>
+              <option value="hrd">HRD</option>
+              <option value="admin">Admin</option>
+            </select>
+          </label>
           <label>Divisi<input name="department" required defaultValue={employee?.department || ''} /></label>
           <label>Jabatan<input name="jobTitle" required defaultValue={employee?.job_title || ''} /></label>
           <label>Tipe kerja
@@ -72,8 +83,8 @@ function EmployeeForm({ employee, onClose, onSaved }: { employee?: Employee; onC
             </select>
           </label>
           <label>Tanggal bergabung<input name="joinedOn" type="date" defaultValue={String(employee?.joined_on || today()).slice(0, 10)} required /></label>
-          <label>Gaji pokok<input name="basicSalary" type="number" min="0" defaultValue={employee?.basic_salary || '0'} /></label>
-          <label>Tarif lembur/jam<input name="overtimeHourlyRate" type="number" min="0" defaultValue={employee?.overtime_hourly_rate || '0'} /></label>
+          <label>Gaji pokok<input name="basicSalary" inputMode="numeric" value={basicSalary} onChange={e => setBasicSalary(e.target.value)} onBlur={() => setBasicSalary(rupiah(parseMoney(basicSalary)))} /></label>
+          <label>Tarif lembur/jam<input name="overtimeHourlyRate" inputMode="numeric" value={overtimeRate} onChange={e => setOvertimeRate(e.target.value)} onBlur={() => setOvertimeRate(rupiah(parseMoney(overtimeRate)))} /></label>
           <label>Nomor telepon<input name="phone" defaultValue={employee?.phone || ''} /></label>
         </div>
         {error && <p className="form-error">{error}</p>}
@@ -126,12 +137,13 @@ export function EmployeesPage({ notify }: { notify: (text: string, error?: boole
               </div>
               <div className="table-scroll">
                 <table>
-                  <thead><tr><th>KARYAWAN</th><th>DIVISI</th><th>TIPE</th><th>BERGABUNG</th><th>GAJI POKOK</th><th /></tr></thead>
+                  <thead><tr><th>KARYAWAN</th><th>DIVISI</th><th>ROLE</th><th>TIPE</th><th>BERGABUNG</th><th>GAJI POKOK</th><th /></tr></thead>
                   <tbody>
                     {data.map(e => (
                       <tr key={e.id}>
                         <td><div className="person"><Avatar small initials={initials(e.full_name)} /><span><strong>{e.full_name}</strong><small>{e.email || e.job_title}</small></span></div></td>
                         <td>{e.department}</td>
+                        <td><Badge tone={e.must_change_password ? 'orange' : 'blue'}>{e.account_role || 'employee'}</Badge></td>
                         <td>{e.employment_type.replace('_', ' ')}</td>
                         <td>{dateText(e.joined_on)}</td>
                         <td>{rupiah(e.basic_salary)}</td>

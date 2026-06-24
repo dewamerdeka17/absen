@@ -79,7 +79,7 @@ export function Dashboard({ go, scan }: { go: (id: NavId) => void; scan: () => v
               <button onClick={scan}><span className="tone-blue"><CameraIcon /></span><b>Scan wajah</b><small>Check-in/out</small></button>
               <button onClick={() => go('roster')}><span className="tone-purple"><Bot /></span><b>Buat roster</b><small>Otomatis</small></button>
               <button onClick={() => go('payroll')}><span className="tone-green"><CircleDollarSign /></span><b>Proses gaji</b><small>Bulan ini</small></button>
-              <button onClick={() => go('reports')}><span className="tone-orange"><FileBarChart /></span><b>Ekspor data</b><small>CSV</small></button>
+              <button onClick={() => go('reports')}><span className="tone-orange"><FileBarChart /></span><b>Ekspor data</b><small>XLSX</small></button>
             </div>
           </section>
         </div>

@@ -1,6 +1,6 @@
 import { useState, useMemo, type FormEvent } from 'react'
 import {
-  CalendarDays, ChevronLeft, ChevronRight, Clock3, LoaderCircle, Plus, Sparkles, TimerReset,
+  CalendarDays, ChevronLeft, ChevronRight, Clock3, LoaderCircle, Plus, Shuffle, TimerReset,
 } from 'lucide-react'
 import { Avatar, Card, EmptyState } from '../components'
 import { Busy, ErrorBox, Modal, PageHeading } from '../components/ui'
@@ -83,7 +83,7 @@ export function RosterPage({ notify }: { notify: (text: string, error?: boolean)
         action={<>
           <button className="button secondary" onClick={() => setShiftOpen(true)}><Plus size={17} /> Tipe shift</button>
           <button className="button ai-button" disabled={generating} onClick={generate}>
-            {generating ? <LoaderCircle className="spin" /> : <Sparkles size={17} />} Buat otomatis
+            {generating ? <LoaderCircle className="spin" /> : <Shuffle size={17} />} Generate roster otomatis
           </button>
         </>}
       />

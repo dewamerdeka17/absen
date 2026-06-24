@@ -12,9 +12,10 @@ export type NavId =
 export type Session = {
   uid: string
   org: string
-  role: 'admin' | 'employee'
+  role: 'owner' | 'admin' | 'hrd' | 'manager' | 'employee'
   name: string
   employeeId?: string | null
+  mustChangePassword?: boolean
 }
 
 export type Organization = {
@@ -38,6 +39,8 @@ export type Employee = {
   basic_salary: string
   overtime_hourly_rate: string
   document_status: Record<string, boolean>
+  account_role?: Session['role']
+  must_change_password?: boolean
 }
 
 export type AttendanceRow = {
@@ -50,6 +53,18 @@ export type AttendanceRow = {
   status?: string
   latitude?: string
   longitude?: string
+  accuracy_meters?: string
+  distance_meters?: string
+  work_location_name?: string
+}
+
+export type WorkLocation = {
+  id: string
+  name: string
+  latitude: string
+  longitude: string
+  radius_meters: number
+  is_active: boolean
 }
 
 export type DashboardData = {

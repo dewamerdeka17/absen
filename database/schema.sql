@@ -25,7 +25,7 @@ CREATE TABLE organizations (
 
 CREATE TABLE roles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  code text NOT NULL UNIQUE CHECK (code IN ('superadmin', 'hr_admin', 'employee')),
+  code text NOT NULL UNIQUE CHECK (code IN ('owner', 'admin', 'hrd', 'manager', 'employee')),
   name text NOT NULL,
   permissions jsonb NOT NULL DEFAULT '[]'
 );
@@ -37,9 +37,10 @@ CREATE TABLE users (
   email citext NOT NULL,
   username citext,
   password_hash text,
-  provider text NOT NULL DEFAULT 'local' CHECK (provider IN ('local', 'google', 'github')),
+  provider text NOT NULL DEFAULT 'local' CHECK (provider IN ('local')),
   provider_subject text,
   status user_status NOT NULL DEFAULT 'invited',
+  must_change_password boolean NOT NULL DEFAULT false,
   last_login_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
@@ -117,7 +118,7 @@ CREATE TABLE work_locations (
   name text NOT NULL,
   latitude numeric(9,6) NOT NULL,
   longitude numeric(9,6) NOT NULL,
-  radius_meters integer NOT NULL DEFAULT 100 CHECK (radius_meters > 0),
+  radius_meters integer NOT NULL DEFAULT 100 CHECK (radius_meters BETWEEN 50 AND 100),
   is_active boolean NOT NULL DEFAULT true
 );
 
@@ -170,7 +171,7 @@ CREATE TABLE shift_assignments (
   shift_date date NOT NULL,
   starts_at timestamptz NOT NULL,
   ends_at timestamptz NOT NULL,
-  source text NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'ai', 'swap')),
+  source text NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'auto', 'swap')),
   status approval_status NOT NULL DEFAULT 'approved',
   created_at timestamptz NOT NULL DEFAULT now(),
   CHECK (ends_at > starts_at),
@@ -210,9 +211,14 @@ CREATE TABLE attendance_events (
   attendance_day_id uuid NOT NULL REFERENCES attendance_days(id) ON DELETE CASCADE,
   event_type attendance_event_type NOT NULL,
   captured_at timestamptz NOT NULL DEFAULT now(),
+  device_captured_at timestamptz,
+  server_captured_at timestamptz NOT NULL DEFAULT now(),
   latitude numeric(9,6),
   longitude numeric(9,6),
   location_accuracy_meters numeric(8,2),
+  distance_meters numeric(10,2),
+  work_location_id uuid REFERENCES work_locations(id) ON DELETE SET NULL,
+  work_location_name text,
   face_match_score numeric(5,4) CHECK (face_match_score BETWEEN 0 AND 1),
   liveness_score numeric(5,4) CHECK (liveness_score BETWEEN 0 AND 1),
   device_id text,
@@ -307,4 +313,3 @@ CREATE INDEX idx_events_attendance_time ON attendance_events (attendance_day_id,
 CREATE INDEX idx_location_employee_time ON location_points (employee_id, recorded_at DESC);
 CREATE INDEX idx_payroll_period_status ON payroll_periods (organization_id, status);
 CREATE INDEX idx_audit_org_time ON audit_logs (organization_id, created_at DESC);
-

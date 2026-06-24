@@ -7,7 +7,7 @@ import { Avatar, Badge, Card, EmptyState } from '../components'
 import { BrandLogo } from '../components/BrandLogo'
 import { Busy, ErrorBox } from '../components/ui'
 import { useLoad } from '../hooks/useLoad'
-import { api, getApiBase, post, setToken } from '../api'
+import { api, post, setToken } from '../api'
 import type { Employee, Organization, Session } from '../types'
 import { initials } from '../utils/format'
 
@@ -31,27 +31,14 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: Sessio
   }, [])
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const oauthError = params.get('oauth_error')
-    if (oauthError) {
-      setError(oauthError)
-      params.delete('oauth_error')
-      const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}${window.location.hash}`
-      window.history.replaceState(null, '', next)
-    }
     void check()
   }, [check])
-
-  const startGoogleLogin = () => {
-    const base = getApiBase()
-    const returnTo = window.location.origin
-    window.location.assign(`${base}/api/auth/google/start?returnTo=${encodeURIComponent(returnTo)}`)
-  }
 
   const submit = async (e: FormEvent) => {
     e.preventDefault(); setBusy(true); setError('')
     try {
-      const result = await post<{ token: string; user: Session; organization?: Organization }>(configured ? '/auth/login' : '/setup', form)
+      const payload = configured ? { identifier: form.email, password: form.password } : form
+      const result = await post<{ token: string; user: Session; organization?: Organization }>(configured ? '/auth/login' : '/setup', payload)
       localStorage.setItem('identime_remember', remember ? 'true' : 'false')
       setToken(result.token, remember)
       if (result.organization) onAuthenticated(result.user, result.organization)
@@ -86,20 +73,14 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: Sessio
         <div className="login-box">
           <div className="login-heading">
             <h2>{configured === false ? 'Siapkan ruang kerja' : 'Selamat datang kembali'}</h2>
-            <p>{configured === false ? 'Buat akun administrator pertama organisasi Anda.' : 'Masuk menggunakan akun organisasi Anda.'}</p>
+            <p>{configured === false ? 'Buat perusahaan dan akun owner pertama.' : 'Masuk menggunakan akun organisasi Anda.'}</p>
           </div>
-          {configured === true && (
-            <div className="oauth-buttons">
-              <button type="button" onClick={startGoogleLogin}><span className="google-g">G</span> Google</button>
-            </div>
-          )}
-          {configured === true && <div className="or-divider"><span />atau masuk dengan email<span /></div>}
           <form onSubmit={submit}>
             {configured === false && <>
               <label>Nama organisasi<div className="field"><Building2 size={17} /><input required value={form.organizationName} onChange={e => setForm({ ...form, organizationName: e.target.value })} placeholder="Contoh: Nusantara Digital" /></div></label>
-              <label>Nama administrator<div className="field"><UserRound size={17} /><input required value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} placeholder="Nama lengkap" /></div></label>
+              <label>Nama owner<div className="field"><UserRound size={17} /><input required value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} placeholder="Nama lengkap" /></div></label>
             </>}
-            <label>Email<div className="field"><Mail size={17} /><input type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="admin@perusahaan.com" /></div></label>
+            <label>{configured === false ? 'Email owner' : 'Email / HP / nama / username'}<div className="field"><Mail size={17} /><input type={configured === false ? 'email' : 'text'} required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder={configured === false ? 'owner@perusahaan.com' : 'email, +628..., nama unik, atau EMP-001'} /></div></label>
             <label>Kata sandi<div className="field"><LockKeyhole size={17} /><input type={showPassword ? 'text' : 'password'} minLength={8} required value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Minimal 8 karakter" /><button type="button" onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>
             <label className="remember-check">
               <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} />

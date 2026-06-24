@@ -12,6 +12,8 @@ import { AuthScreen, SearchResults } from './pages/Auth'
 import type { Employee, NavId, Organization, Session } from './types'
 
 type ThemeMode = 'light' | 'dark'
+const peopleRoles: Session['role'][] = ['owner', 'admin', 'hrd']
+const operationsRoles: Session['role'][] = ['owner', 'admin', 'hrd', 'manager']
 
 function initialTheme(): ThemeMode {
   const saved = localStorage.getItem('identime_theme')
@@ -53,19 +55,12 @@ export default function LiveApp() {
   }, [theme])
 
   const bootstrap = useCallback(async () => {
-    const params = new URLSearchParams(window.location.search)
-    const oauthToken = params.get('oauth_token')
-    if (oauthToken) {
-      setToken(oauthToken, true)
-      params.delete('oauth_token')
-      const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}${window.location.hash}`
-      window.history.replaceState(null, '', next)
-    }
-    if (!oauthToken && !hasToken()) { setBooting(false); return }
+    if (!hasToken()) { setBooting(false); return }
     try {
       const me = await api<{ user: Session; organization: Organization }>('/me')
       setUser(me.user)
       setOrg(me.organization)
+      if (me.user.mustChangePassword) setActive('profile')
     } catch {
       setToken()
     } finally {
@@ -93,22 +88,23 @@ export default function LiveApp() {
   const page = useMemo(() => {
     if (!user || !org) return null
     const props = { notify }
+    if (user.mustChangePassword) return <ProfilePage user={user} org={org} notify={notify} force onPasswordChanged={() => setUser({ ...user, mustChangePassword: false })} />
     switch (active) {
       case 'dashboard': return <Dashboard go={setActive} scan={() => setScan(true)} />
-      case 'employees': return <EmployeesPage {...props} />
+      case 'employees': return peopleRoles.includes(user.role) ? <EmployeesPage {...props} /> : <div className="error-box">Data karyawan hanya dapat diakses owner, admin, dan HRD.</div>
       case 'attendance': return <AttendancePage openScan={() => setScan(true)} refreshKey={scanRefresh} />
-      case 'roster': return <RosterPage {...props} />
-      case 'payroll': return user.role === 'admin' ? <PayrollPage {...props} /> : <div className="error-box">Penggajian hanya dapat diakses administrator.</div>
-      case 'reports': return <ReportsPage {...props} />
+      case 'roster': return operationsRoles.includes(user.role) ? <RosterPage {...props} /> : <div className="error-box">Roster hanya dapat diakses role operasional.</div>
+      case 'payroll': return peopleRoles.includes(user.role) ? <PayrollPage {...props} /> : <div className="error-box">Penggajian hanya dapat diakses owner, admin, dan HRD.</div>
+      case 'reports': return peopleRoles.includes(user.role) ? <ReportsPage org={org} {...props} /> : <div className="error-box">Laporan hanya dapat diakses owner, admin, dan HRD.</div>
       case 'maps': return <MapsPage user={user} {...props} />
       case 'settings': return <SettingsPage user={user} org={org} setOrg={setOrg} {...props} />
-      default: return <ProfilePage user={user} org={org} notify={notify} />
+      default: return <ProfilePage user={user} org={org} notify={notify} onPasswordChanged={() => setUser({ ...user, mustChangePassword: false })} />
     }
   }, [active, user, org, scanRefresh])
 
   if (booting) return <div className="app-boot"><BrandLogo markOnly /><LoaderCircle className="spin" /></div>
 
-  if (!user || !org) return <AuthScreen onAuthenticated={(u, o) => { setUser(u); setOrg(o) }} />
+  if (!user || !org) return <AuthScreen onAuthenticated={(u, o) => { setUser(u); setOrg(o); if (u.mustChangePassword) setActive('profile') }} />
 
   return (
     <div className="app-shell">
