@@ -234,9 +234,30 @@ function routePath(req: VercelRequest) {
   return (req.url || '').split('?')[0].replace(/^\/api/, '').replace(/\/$/, '') || '/'
 }
 
+function requestBody(req: VercelRequest) {
+  const value = req.body
+  const parseJson = (text: string) => {
+    if (!text.trim()) return undefined
+    try {
+      return JSON.parse(text)
+    } catch {
+      throw new ApiError(400, 'INVALID_JSON', 'Body JSON tidak valid.')
+    }
+  }
+  if (typeof value === 'string') return parseJson(value)
+  if (Buffer.isBuffer(value)) return parseJson(value.toString('utf8'))
+  return value
+}
+
 function body<T>(req: VercelRequest, schema: z.ZodType<T>): T {
-  const parsed = schema.safeParse(req.body)
-  if (!parsed.success) throw new ApiError(400, 'VALIDATION_ERROR', 'Data yang dikirim tidak valid.', parsed.error.flatten().fieldErrors)
+  const parsed = schema.safeParse(requestBody(req))
+  if (!parsed.success) {
+    const flattened = parsed.error.flatten()
+    throw new ApiError(400, 'VALIDATION_ERROR', 'Data yang dikirim tidak valid.', {
+      ...flattened.fieldErrors,
+      ...(flattened.formErrors.length ? { _form: flattened.formErrors } : {}),
+    })
+  }
   return parsed.data
 }
 
@@ -584,10 +605,11 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   const workLocationMatch=path.match(/^\/work-locations\/([^/]+)$/)
   if(workLocationMatch&&method==='PATCH'){
     const session=await sessionFor(req,workLocationRoles),input=body(req,workLocationSchema.partial())
-    await pool!.query(`UPDATE work_locations SET
+    const result=await pool!.query(`UPDATE work_locations SET
       name=coalesce($1,name), latitude=coalesce($2,latitude), longitude=coalesce($3,longitude),
       radius_meters=coalesce($4,radius_meters), is_active=coalesce($5,is_active), updated_at=now()
       WHERE id=$6 AND organization_id=$7`,[input.name||null,input.latitude??null,input.longitude??null,input.radiusMeters??null,input.isActive??null,workLocationMatch[1],session.org])
+    if(!result.rowCount)throw new ApiError(404,'WORK_LOCATION_NOT_FOUND','Lokasi kerja tidak ditemukan.')
     return send(res,200,{updated:true})
   }
 
