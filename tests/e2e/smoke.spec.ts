@@ -454,11 +454,17 @@ test('admin without linked employee can send a browser location from live tracki
   })
 
   await page.goto('/')
+  await expect(page.getByText('Database terhubung')).toHaveCount(0)
+  await expect(page.locator('.top-status')).toHaveCount(0)
+  const headerAfterContent = await page.locator('.top-actions').evaluate(element => getComputedStyle(element, '::after').content)
+  expect(['none', 'normal', '']).toContain(headerAfterContent)
   await page.getByRole('button', { name: /Live Tracking/ }).click()
+  await expect(page.getByText('Google Maps API key belum dikonfigurasi. Tambahkan VITE_GOOGLE_MAPS_API_KEY di file environment.')).toBeVisible()
   await page.getByRole('button', { name: /Kirim lokasi saya/ }).click()
 
   await expect(page.getByText('Lokasi kerja berhasil diperbarui.')).toBeVisible()
   await expect(page.getByRole('main').getByRole('link', { name: /Admin Test/ })).toBeVisible()
+  await expect(page.getByText('Belum ada karyawan aktif yang mengirim lokasi.')).toHaveCount(0)
   expect(locationPayload).toMatchObject({
     latitude: -6.2,
     longitude: 106.816666,

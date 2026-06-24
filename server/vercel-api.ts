@@ -640,7 +640,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     const params=canSeeAll?[session.org]:[session.org,session.employeeId]
     const onlyMine=canSeeAll?'':' AND l.employee_id=$2'
     const result=await pool!.query(`WITH active_attendance AS (
-        SELECT DISTINCT ON (employee_id) employee_id,event_type,captured_at
+        SELECT DISTINCT ON (employee_id) employee_id,event_type,captured_at,distance_meters,work_location_name
         FROM attendance_events
         WHERE organization_id=$1 AND (captured_at AT TIME ZONE 'Asia/Jakarta')::date=(now() AT TIME ZONE 'Asia/Jakarta')::date
         ORDER BY employee_id,captured_at DESC
@@ -652,6 +652,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         ORDER BY employee_id,recorded_at DESC
       )
       SELECT l.employee_id,e.full_name,e.job_title,l.latitude,l.longitude,l.accuracy_meters,l.recorded_at,
+        a.distance_meters,a.work_location_name,
         CASE WHEN l.recorded_at>now()-interval '90 seconds' THEN 'online'
              WHEN l.recorded_at>now()-interval '5 minutes' THEN 'stale'
              ELSE 'offline' END AS tracking_status

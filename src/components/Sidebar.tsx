@@ -119,7 +119,6 @@ export function Header({ active, menu, setSearch, search, theme, toggleTheme }: 
         <kbd>⌘ K</kbd>
       </label>
       <div className="top-actions">
-        <button className="top-status"><span />Database terhubung</button>
         <button className="icon-button theme-toggle" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Gunakan mode terang' : 'Gunakan mode gelap'}>
           {theme === 'dark' ? <Sun size={19} /> : <Moon size={19} />}
         </button>
