@@ -7,7 +7,7 @@ import { useLoad } from '../hooks/useLoad'
 import type { Organization, Session, WorkLocation } from '../types'
 import { initials } from '../utils/format'
 
-const canManageSettings = (role: Session['role']) => ['owner', 'admin', 'hrd', 'manager'].includes(role)
+const canManageWorkLocations = (role: Session['role']) => ['owner', 'hrd', 'manager'].includes(role)
 const roleLabel: Record<Session['role'], string> = {
   owner: 'Owner',
   admin: 'Administrator',
@@ -56,7 +56,7 @@ export function SettingsPage({ user, org, setOrg, notify }: { user: Session; org
         <div className="card-heading payroll-heading">
           <div><h2>Lokasi kerja</h2><p>Radius validasi absensi wajib 50-100 meter.</p></div>
         </div>
-        {canManageSettings(user.role) && (
+        {canManageWorkLocations(user.role) && (
           <form className="settings-form work-location-form" onSubmit={saveLocation}>
             <label>Nama lokasi<input name="name" required placeholder="Kantor pusat" /></label>
             <label>Latitude<input name="latitude" type="number" step="0.000001" required placeholder="-6.200000" /></label>

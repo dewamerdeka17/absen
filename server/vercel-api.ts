@@ -173,6 +173,7 @@ type Session = { uid: string; org: string; role: Role; name: string; employeeId?
 
 const peopleRoles: readonly Role[] = ['owner', 'admin', 'hrd']
 const operationsRoles: readonly Role[] = ['owner', 'admin', 'hrd', 'manager']
+const workLocationRoles: readonly Role[] = ['owner', 'hrd', 'manager']
 
 function normalizePhone(value?: string | null) {
   const raw = String(value || '').trim()
@@ -575,14 +576,14 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     return send(res,200,result.rows)
   }
   if(path==='/work-locations'&&method==='POST'){
-    const session=await sessionFor(req,operationsRoles),input=body(req,workLocationSchema),id=randomUUID()
+    const session=await sessionFor(req,workLocationRoles),input=body(req,workLocationSchema),id=randomUUID()
     await pool!.query(`INSERT INTO work_locations (id,organization_id,name,latitude,longitude,radius_meters,is_active)
       VALUES ($1,$2,$3,$4,$5,$6,$7)`,[id,session.org,input.name,input.latitude,input.longitude,input.radiusMeters,input.isActive ?? true])
     return send(res,201,{id})
   }
   const workLocationMatch=path.match(/^\/work-locations\/([^/]+)$/)
   if(workLocationMatch&&method==='PATCH'){
-    const session=await sessionFor(req,operationsRoles),input=body(req,workLocationSchema.partial())
+    const session=await sessionFor(req,workLocationRoles),input=body(req,workLocationSchema.partial())
     await pool!.query(`UPDATE work_locations SET
       name=coalesce($1,name), latitude=coalesce($2,latitude), longitude=coalesce($3,longitude),
       radius_meters=coalesce($4,radius_meters), is_active=coalesce($5,is_active), updated_at=now()

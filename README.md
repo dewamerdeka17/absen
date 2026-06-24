@@ -54,7 +54,7 @@ Opsional: set `ORG_SLUG` untuk menentukan slug organisasi.
 ## Role
 
 - `owner`: akses penuh termasuk organisasi dan user management.
-- `admin`: konfigurasi operasional dan user management.
+- `admin`: konfigurasi organisasi dan user management.
 - `hrd`: karyawan, absensi, payroll, laporan, reset password, dan lokasi kerja.
 - `manager`: roster, absensi, live tracking, dan lokasi kerja operasional.
 - `employee`: absensi, live tracking dirinya, roster/profil pribadi.
@@ -63,7 +63,7 @@ Owner/admin/HRD dapat mengedit akun karyawan dan role dari menu `Karyawan`. Pass
 
 ## Lokasi kerja dan absensi
 
-Atur lokasi kerja dari `Pengaturan`:
+Atur lokasi kerja dari `Pengaturan`. Hanya role `owner`, `hrd`, dan `manager` yang dapat menambah atau mengubah lokasi kerja:
 
 - nama lokasi
 - latitude

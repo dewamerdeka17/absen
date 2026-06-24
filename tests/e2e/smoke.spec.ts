@@ -330,10 +330,10 @@ test('reports export downloads a xlsx workbook', async ({ page, isMobile }) => {
   expect(download.suggestedFilename()).toMatch(/\.xlsx$/)
 })
 
-test('admin can configure a work location radius for attendance validation', async ({ page, isMobile }) => {
+test('manager can configure a work location radius for attendance validation', async ({ page, isMobile }) => {
   test.skip(isMobile, 'desktop navigation coverage')
   let payload: Record<string, unknown> | null = null
-  await mockAuthenticatedApp(page)
+  await mockAuthenticatedApp(page, { session: { ...adminSession, role: 'manager' } })
   await page.route('**/api/work-locations', async route => {
     if (route.request().method() === 'POST') {
       payload = route.request().postDataJSON()
@@ -367,6 +367,18 @@ test('admin can configure a work location radius for attendance validation', asy
     radiusMeters: 75,
     isActive: true,
   })
+})
+
+test('admin cannot configure work locations from settings', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'desktop navigation coverage')
+  await mockAuthenticatedApp(page)
+
+  await page.goto('/')
+  await page.getByRole('button', { name: /Pengaturan/ }).click()
+
+  await expect(page.getByRole('heading', { name: 'Lokasi kerja' })).toBeVisible()
+  await expect(page.getByLabel('Nama lokasi')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Tambah lokasi/ })).toHaveCount(0)
 })
 
 test('admin without linked employee can send a browser location from live tracking', async ({ page, context, isMobile }) => {
